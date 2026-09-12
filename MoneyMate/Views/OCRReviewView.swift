@@ -85,7 +85,7 @@ struct OCRReviewView: View {
                 Spacer(minLength: 0)
 
                 Menu {
-                    ForEach(MoneyStore.categories, id: \.self) { name in
+                    ForEach(Tx.categories, id: \.self) { name in
                         Button {
                             draft.wrappedValue.category = name
                         } label: {

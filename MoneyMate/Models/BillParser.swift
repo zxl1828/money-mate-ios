@@ -181,7 +181,7 @@ enum BillParser {
 
     private static func titleText(from cleaned: String, removing range: Range<String.Index>) -> String {
         var out = cleaned
-        if let r = Range(range, in: out) { out.removeSubrange(r) }
+        out = String(cleaned[cleaned.startIndex..<range.lowerBound]) + String(cleaned[range.upperBound...])
         for word in noiseWords { out = out.replacingOccurrences(of: word, with: " ") }
         out = out.replacingOccurrences(of: "|", with: " ")
         out = out.trimmingCharacters(in: CharacterSet(charactersIn: " \t-:：·,，、./\\()（）[]【】*+"))
