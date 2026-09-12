@@ -128,9 +128,9 @@ struct TransactionsPage: View {
             .padding(.bottom, 220)
         }
         .scrollIndicators(.hidden)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: category)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: type)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: monthOffset)
+        .animation(.spring(response: 0.24, dampingFraction: 0.92), value: category)
+        .animation(.spring(response: 0.24, dampingFraction: 0.92), value: type)
+        .animation(.spring(response: 0.24, dampingFraction: 0.92), value: monthOffset)
     }
 
     private var titleRow: some View {
@@ -373,7 +373,7 @@ struct StatsPage: View {
             .padding(.bottom, 220)
         }
         .scrollIndicators(.hidden)
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: range)
+        .animation(.spring(response: 0.24, dampingFraction: 0.92), value: range)
     }
 
     private var titleRow: some View {

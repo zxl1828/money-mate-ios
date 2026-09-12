@@ -462,7 +462,7 @@ struct BudgetSheet: View {
         VStack(spacing: 10) {
             Button {
                 let suggestion = store.budgetSuggestion()
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { store.budget = suggestion }
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.92)) { store.budget = suggestion }
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "wand.and.stars")
@@ -644,60 +644,91 @@ struct RecurringSheet: View {
     }
 }
 
-// MARK: - 扫描记账（OCR 后续接入）
+// MARK: - 扫描记账（苹果 Vision 离线 OCR）
 
 struct ScanSheet: View {
+    @ObservedObject var store: MoneyStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var item: PhotosPickerItem?
     @State private var image: UIImage?
     @State private var status = "选择一张微信 / 支付宝账单截图"
+    @State private var working = false
+    @State private var failed: String?
+    @State private var drafts: [DraftTx] = []
+
+    private var reviewing: Bool { !drafts.isEmpty || failed != nil }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    preview
-                    Text(status)
-                        .font(.system(.footnote, design: .rounded))
-                        .foregroundStyle(Palette.ink.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                    PhotosPicker(selection: $item, matching: .images) {
-                        Label("从相册选择图片", systemImage: "photo.on.rectangle.angled")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 13)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("关于 OCR").font(.system(.footnote, design: .rounded).weight(.bold))
-                            .foregroundStyle(Palette.ink)
-                        Text("识别引擎已在离线打包方案中准备，本版本先用「记一笔」手动录入，识别能力会在下一版接入。")
-                            .font(.caption)
-                            .foregroundStyle(Palette.ink.opacity(0.65))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .glassPanel(Radius.tile)
+            Group {
+                if reviewing {
+                    OCRReviewView(store: store, drafts: $drafts, onDone: finish)
+                } else {
+                    picker
                 }
-                .padding(20)
             }
-            .scrollIndicators(.hidden)
             .background(GlassBackground())
-            .navigationTitle("扫描记账")
+            .navigationTitle(reviewing ? "确认识别结果" : "扫描记账")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if reviewing {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("重新选图") { reset() }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("关闭") { dismiss() }
                 }
             }
             .onChange(of: item) { _, newValue in
-                load(newValue)
+                guard let newValue else { return }
+                recognize(newValue)
             }
         }
+    }
+
+    // MARK: 选图
+
+    private var picker: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                preview
+
+                if working {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(Palette.primary)
+                        Text(status)
+                            .font(.system(.footnote, design: .rounded).weight(.medium))
+                            .foregroundStyle(Palette.ink.opacity(0.75))
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .glassPanel(Radius.chip, strong: true)
+                    .transition(.opacity)
+                } else {
+                    Text(status)
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                }
+
+                PhotosPicker(selection: $item, matching: .images) {
+                    Label("从相册选择图片", systemImage: "photo.on.rectangle.angled")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .disabled(working)
+
+                info
+            }
+            .padding(20)
+            .animation(.easeOut(duration: 0.2), value: working)
+        }
+        .scrollIndicators(.hidden)
     }
 
     @ViewBuilder
@@ -721,20 +752,58 @@ struct ScanSheet: View {
         }
     }
 
-    private func load(_ picked: PhotosPickerItem?) {
-        guard let picked else { return }
-        status = "图片已载入，OCR 将在下一版接入"
+    private var info: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("关于 OCR").font(.system(.footnote, design: .rounded).weight(.bold))
+                .foregroundStyle(Palette.ink)
+            Text("识别用苹果系统自带的 Vision 引擎在本机离线完成，图片不会上传，也不需要联网。识别结果会先列出来，你说要哪几笔再入库。")
+                .font(.caption)
+                .foregroundStyle(Palette.ink.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.tile)
+    }
+
+    private func reset() {
+        drafts = []
+        failed = nil
+        image = nil
+        status = "选择一张微信 / 支付宝账单截图"
+    }
+
+    private func finish(_ count: Int) {
+        if count > 0 { dismiss() } else { reset() }
+    }
+
+    // MARK: 识别
+
+    private func recognize(_ picked: PhotosPickerItem) {
+        working = true
+        failed = nil
+        status = "正在读取图片…"
         Task { @MainActor in
-            if let data = try? await picked.loadTransferable(type: Data.self),
-               let decoded = UIImage(data: data) {
+            do {
+                guard let data = try await picked.loadTransferable(type: Data.self),
+                      let decoded = UIImage(data: data) else { throw OCRError.invalidImage }
                 image = decoded
-            } else {
-                status = "图片读取失败，请换一张试试"
+                status = "正在识别文字…"
+                let lines = try await OCRService.recognize(image: decoded)
+                status = "正在整理账单…"
+                let parsed = await Task.detached(priority: .userInitiated) { BillParser.parse(lines) }.value
+                drafts = parsed
+                if parsed.isEmpty {
+                    failed = "这张图里没找到账单明细，换一张更清晰的截图试试"
+                }
+            } catch {
+                failed = (error as? LocalizedError)?.errorDescription ?? "识别失败，请再试一次"
             }
+            working = false
+            item = nil
         }
     }
 }
-
 // MARK: - 消息中心
 
 struct NotifyItem: Identifiable {

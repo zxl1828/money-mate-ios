@@ -69,6 +69,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var tab: MoneyTab = .home
+    @State private var forward = true
     @Namespace private var glassNS
 
     @State private var showAdd = false
@@ -97,11 +98,11 @@ struct ContentView: View {
         }
         .fontDesign(.rounded)
         .tint(Palette.primary)
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: tab)
+        .animation(.spring(response: 0.22, dampingFraction: 0.93), value: tab)
         .animation(.easeInOut(duration: 0.25), value: locked)
         .sheet(isPresented: $showAdd) { AddSheet(store: store) }
         .sheet(item: $editing) { tx in AddSheet(store: store, editing: tx) }
-        .sheet(isPresented: $showScan) { ScanSheet() }
+        .sheet(isPresented: $showScan) { ScanSheet(store: store) }
         .sheet(isPresented: $showBudget) { BudgetSheet(store: store) }
         .sheet(isPresented: $showNotify) { NotifySheet(store: store) }
         .sheet(isPresented: $showRecurring) { RecurringSheet(store: store) }
@@ -132,9 +133,20 @@ struct ContentView: View {
     private var pageArea: some View {
         page
             .id(tab)
-            .transition(.asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal: .move(edge: .leading).combined(with: .opacity)))
+            .transition(pageTransition)
+    }
+
+    /// 左右切屏：方向跟着标签顺序走，弹簧收紧到 0.22s，出手更利落
+    private var pageTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity))
+    }
+
+    private func select(_ item: MoneyTab) {
+        guard item != tab else { return }
+        forward = item.rawValue > tab.rawValue
+        withAnimation(.spring(response: 0.22, dampingFraction: 0.93)) { tab = item }
     }
 
     @ViewBuilder
@@ -158,16 +170,16 @@ struct ContentView: View {
                     notify: { showNotify = true },
                     recurring: { showRecurring = true },
                     open: { detail = $0 },
-                    openList: { withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { tab = .list } })
+                    openList: { select(.list) })
     }
 
     // MARK: 轻提示
 
     private func push(_ text: String) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { toast = text }
+        withAnimation(.spring(response: 0.22, dampingFraction: 0.92)) { toast = text }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_700_000_000)
-            withAnimation(.easeOut(duration: 0.3)) { toast = nil }
+            withAnimation(.easeOut(duration: 0.18)) { toast = nil }
         }
     }
 
@@ -223,9 +235,7 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 ForEach(MoneyTab.allCases) { item in
                     TabItem(tab: item, isSelected: tab == item, namespace: glassNS) {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
-                            tab = item
-                        }
+                        select(item)
                     }
                 }
             }
