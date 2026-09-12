@@ -1,0 +1,27 @@
+name: MoneyMate
+options:
+  bundleIdPrefix: com.moneymate
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+targets:
+  MoneyMate:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - MoneyMate
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.moneymate.app
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        TARGETED_DEVICE_FAMILY: "1"
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        CODE_SIGN_STYLE: Automatic
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0"

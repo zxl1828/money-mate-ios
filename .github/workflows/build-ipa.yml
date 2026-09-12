@@ -1,0 +1,79 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      EXPORT_METHOD: ${{ secrets.EXPORT_METHOD }}
+      CERT_P12_B64: ${{ secrets.CERT_P12_B64 }}
+      CERT_P12_PASSWORD: ${{ secrets.CERT_P12_PASSWORD }}
+      PROVISION_PROFILE_B64: ${{ secrets.PROVISION_PROFILE_B64 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print toolchain
+        run: xcodebuild -version && xcodegen version || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build signed IPA (requires secrets)
+        if: env.CERT_P12_B64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$CERT_P12_B64" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain || true
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "" build.keychain
+
+          PR="${EXPORT_METHOD:-development}"
+          echo "$PROVISION_PROFILE_B64" | base64 --decode > /tmp/profile.mobileprovision
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp /tmp/profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/profile.mobileprovision"
+
+          xcodebuild archive \
+            -project MoneyMate.xcodeproj -scheme MoneyMate -configuration Release \
+            -archivePath build/MoneyMate.xcarchive \
+            -destination 'generic/platform=iOS' \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual
+          xcodebuild -exportArchive \
+            -archivePath build/MoneyMate.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export
+          cp build/export/MoneyMate.ipa ./MoneyMate-signed.ipa
+
+      - name: Build unsigned IPA
+        if: env.CERT_P12_B64 == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project MoneyMate.xcodeproj -scheme MoneyMate -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          APP_PATH="$(find Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -qry MoneyMate-unsigned.ipa Payload
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoneyMate-ipa
+          path: |
+            MoneyMate-signed.ipa
+            MoneyMate-unsigned.ipa
+          if-no-files-found: warn
