@@ -29,6 +29,11 @@ jobs:
       - name: Print toolchain
         run: xcodebuild -version && xcodegen version || true
 
+      - name: Check app icon asset
+        run: |
+          ls -l MoneyMate/Assets.xcassets/AppIcon.appiconset
+          test -f MoneyMate/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -73,6 +78,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
           APP_PATH="$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)"
           test -n "$APP_PATH"
+          echo "APP: $APP_PATH"
+          ls "$APP_PATH" | head -30
+          test -n "$(ls "$APP_PATH" | grep -i '^AppIcon' | head -1)"
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -qry MoneyMate-unsigned.ipa Payload
