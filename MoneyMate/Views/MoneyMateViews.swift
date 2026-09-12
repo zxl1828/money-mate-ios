@@ -1,55 +1,73 @@
 import SwiftUI
 import Foundation
+import LocalAuthentication
 
 // MARK: - 液态玻璃工具
 // 部署目标 iOS 26.0，只使用 Apple 官方 SwiftUI API：
 //   glassEffect(_:in:) / GlassEffectContainer / glassEffectID(_:in:) / glassEffectUnion(id:namespace:)
 extension View {
-    /// 统一入口：把液态玻璃材质应用到任意形状。
     func liquidGlass(_ glass: Glass, in shape: some Shape) -> some View {
         glassEffect(glass, in: shape)
+    }
+}
+
+// MARK: - 生物识别
+
+enum Biometrics {
+    @MainActor
+    static func authenticate(reason: String = "解锁 MoneyMate 账本") async -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            return true   // 设备不支持生物识别时直接放行
+        }
+        return (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
     }
 }
 
 // MARK: - 标签
 
 enum MoneyTab: Int, CaseIterable, Identifiable {
-    case home = 0
-    case stats
-    case settings
+    case home = 0, list, stats, settings
 
     var id: Int { rawValue }
 
     var title: String {
         switch self {
         case .home: return "首页"
+        case .list: return "明细"
         case .stats: return "统计"
-        case .settings: return "设置"
+        case .settings: return "我的"
         }
     }
 
     var icon: String {
         switch self {
         case .home: return "house.fill"
-        case .stats: return "chart.bar.fill"
-        case .settings: return "gearshape.fill"
+        case .list: return "list.bullet.rectangle.fill"
+        case .stats: return "chart.bar.xaxis"
+        case .settings: return "person.crop.circle.fill"
         }
     }
 }
 
-/// 首页按钮对应的真实动作。
+/// 首页按钮对应的真实动作
 struct HomeActions {
     var add: () -> Void
     var scan: () -> Void
     var budget: () -> Void
     var notify: () -> Void
+    var recurring: () -> Void
     var open: (Tx) -> Void
+    var openList: () -> Void
 }
 
 // MARK: - 根视图
 
 struct ContentView: View {
     @StateObject private var store = MoneyStore()
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var tab: MoneyTab = .home
     @Namespace private var glassNS
 
@@ -57,22 +75,66 @@ struct ContentView: View {
     @State private var showScan = false
     @State private var showBudget = false
     @State private var showNotify = false
+    @State private var showRecurring = false
+    @State private var editing: Tx?
     @State private var detail: Tx?
     @State private var toast: String?
+
+    @State private var locked = false
 
     var body: some View {
         ZStack {
             GlassBackground()
-            page
+            pageArea
             floatingLayer
             toastLayer
+            if locked {
+                LockScreen {
+                    Task { await unlock() }
+                }
+                .transition(.opacity)
+            }
         }
+        .fontDesign(.rounded)
+        .tint(Palette.primary)
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: tab)
+        .animation(.easeInOut(duration: 0.25), value: locked)
         .sheet(isPresented: $showAdd) { AddSheet(store: store) }
+        .sheet(item: $editing) { tx in AddSheet(store: store, editing: tx) }
         .sheet(isPresented: $showScan) { ScanSheet() }
         .sheet(isPresented: $showBudget) { BudgetSheet(store: store) }
         .sheet(isPresented: $showNotify) { NotifySheet(store: store) }
-        .sheet(item: $detail) { tx in DetailSheet(store: store, tx: tx) }
+        .sheet(isPresented: $showRecurring) { RecurringSheet(store: store) }
+        .sheet(item: $detail) { tx in
+            DetailSheet(store: store, tx: tx) { editing = $0 }
+        }
+        .task { await unlock() }
+        .onChange(of: scenePhase) { _, phase in
+            guard store.privacyLock else { return }
+            if phase == .background { locked = true }
+            if phase == .active && locked { Task { await unlock() } }
+        }
+    }
+
+    @MainActor
+    private func unlock() async {
+        guard store.privacyLock else { locked = false; return }
+        locked = true
+        let ok = await Biometrics.authenticate()
+        if ok {
+            withAnimation(.easeInOut(duration: 0.25)) { locked = false }
+        }
+        if !ok { push("已取消解锁") }
+    }
+
+    // MARK: 页面
+
+    private var pageArea: some View {
+        page
+            .id(tab)
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)))
     }
 
     @ViewBuilder
@@ -80,6 +142,8 @@ struct ContentView: View {
         switch tab {
         case .home:
             HomePage(store: store, namespace: glassNS, actions: homeActions)
+        case .list:
+            TransactionsPage(store: store, namespace: glassNS, onOpen: { detail = $0 })
         case .stats:
             StatsPage(store: store, namespace: glassNS)
         case .settings:
@@ -92,14 +156,17 @@ struct ContentView: View {
                     scan: { showScan = true },
                     budget: { showBudget = true },
                     notify: { showNotify = true },
-                    open: { detail = $0 })
+                    recurring: { showRecurring = true },
+                    open: { detail = $0 },
+                    openList: { withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { tab = .list } })
     }
 
-    /// 轻提示
+    // MARK: 轻提示
+
     private func push(_ text: String) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { toast = text }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            try? await Task.sleep(nanoseconds: 1_700_000_000)
             withAnimation(.easeOut(duration: 0.3)) { toast = nil }
         }
     }
@@ -108,12 +175,15 @@ struct ContentView: View {
     private var toastLayer: some View {
         if let text = toast {
             VStack {
-                Text(text)
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .liquidGlass(.regular.tint(Color.white.opacity(0.35)), in: Capsule())
-                    .padding(.top, 10)
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkle").font(.caption)
+                    Text(text).font(.system(.subheadline, design: .rounded).weight(.semibold))
+                }
+                .foregroundStyle(Palette.ink)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 11)
+                .glassPanel(Radius.chip, strong: true)
+                .padding(.top, 8)
                 Spacer()
             }
             .allowsHitTesting(false)
@@ -166,6 +236,40 @@ struct ContentView: View {
     }
 }
 
+// MARK: - 锁屏
+
+struct LockScreen: View {
+    var onUnlock: () -> Void
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
+            VStack(spacing: 16) {
+                CoinBuddy(mood: .cool, size: 96)
+                Text("MoneyMate 已锁定")
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .foregroundStyle(Palette.ink)
+                Text("用面容 / 指纹解锁你的账本")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+                Button {
+                    onUnlock()
+                } label: {
+                    Label("解锁", systemImage: "faceid")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+            }
+            .padding(28)
+        }
+    }
+}
+
 // MARK: - 首页
 
 struct HomePage: View {
@@ -177,29 +281,40 @@ struct HomePage: View {
         ScrollView {
             VStack(spacing: 18) {
                 header
-                balanceCard
+                heroCard
                 quickActions
+                trendCard
                 todayList
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 12)
             .padding(.bottom, 220)
         }
         .scrollIndicators(.hidden)
     }
 
-    // MARK: 顶部
+    private var mood: MascotMood {
+        MascotMood.forBudget(store.budgetRatio)
+    }
 
     private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("本月账单").font(.title2.weight(.semibold))
-                Text("Hi，今天也要省着点").font(.subheadline).opacity(0.7)
+        HStack(spacing: 12) {
+            CoinBuddy(mood: mood, size: 40)
+                .frame(width: 62, height: 62)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(greeting)
+                    .font(.system(.title3, design: .rounded).weight(.bold))
+                    .foregroundStyle(Palette.ink)
+                Text(mood.tip)
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .lineLimit(1)
             }
-            Spacer()
+            Spacer(minLength: 0)
             Button(action: actions.notify) {
                 Image(systemName: "bell.badge.fill")
                     .font(.title3)
+                    .foregroundStyle(Palette.primary)
                     .frame(width: 46, height: 46)
             }
             .buttonStyle(.plain)
@@ -207,111 +322,147 @@ struct HomePage: View {
         }
     }
 
-    // MARK: 余额卡
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 6 { return "夜深了，还在记账？" }
+        if hour < 11 { return "早上好，今天也要省钱" }
+        if hour < 14 { return "中午好，记得记一笔" }
+        if hour < 18 { return "下午好，账本很清楚" }
+        return "晚上好，看看今天花了啥"
+    }
 
-    private var balanceCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("本月结余").font(.headline)
-                Spacer()
-                Text("人民币").font(.caption).opacity(0.6)
-            }
-            Text(store.money(store.balance))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.6)
-            budgetBar
-            balanceStats
+    // MARK: 结余主卡
+
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            heroTop
+            heroAmount
+            heroBudget
+            heroChips
         }
-        .padding(20)
+        .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .liquidGlass(.regular.tint(Color.white.opacity(0.25)),
-                     in: RoundedRectangle(cornerRadius: 28))
+        .liquidGlass(.regular.tint(Palette.glassTint), in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
-    private var budgetBar: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("预算已用 \(Int(store.budgetProgress * 100))%").font(.caption).opacity(0.75)
-                Spacer()
-                Text("预算 " + store.money(store.budget)).font(.caption).opacity(0.75)
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.black.opacity(0.10))
-                    Capsule()
-                        .fill(LinearGradient(colors: [.white, Color(red: 0.35, green: 0.85, blue: 0.75)],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(6, proxy.size.width * store.budgetProgress))
-                }
-            }
-            .frame(height: 8)
+    private var heroTop: some View {
+        HStack {
+            Text("本月结余")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Palette.ink.opacity(0.75))
+            Spacer()
+            Text(store.baseCurrency.rawValue + " · " + store.baseCurrency.name)
+                .font(.caption2)
+                .foregroundStyle(Palette.ink.opacity(0.55))
         }
     }
 
-    private var balanceStats: some View {
-        HStack(spacing: 8) {
-            statChip(label: "收入", value: store.money(store.income), symbol: "arrow.down.right", color: .green)
-            statChip(label: "支出", value: store.money(store.expense), symbol: "arrow.up.right", color: .red)
+    private var heroAmount: some View {
+        Text(store.money(store.balance))
+            .font(.system(size: 36, weight: .heavy, design: .rounded))
+            .foregroundStyle(Palette.ink)
+            .minimumScaleFactor(0.55)
+            .lineLimit(1)
+            .contentTransition(.numericText())
+    }
+
+    private var heroBudget: some View {
+        HStack(spacing: 14) {
+            BudgetRing(progress: store.budgetProgress,
+                       size: 66,
+                       label: String(Int(store.budgetProgress * 100)) + "%")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("本月预算 " + store.money(store.budget))
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.ink.opacity(0.85))
+                Capsule()
+                    .fill(Color.white.opacity(0.55))
+                    .frame(height: 9)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { proxy in
+                            Capsule()
+                                .fill(Palette.hero)
+                                .frame(width: max(9, proxy.size.width * store.budgetProgress))
+                        }
+                        .frame(height: 9)
+                    }
+                Text("还剩 " + store.money(store.budgetLeft))
+                    .font(.caption2)
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+            }
         }
     }
 
-    private func statChip(label: String, value: String, symbol: String, color: Color) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbol).foregroundStyle(color)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.caption).opacity(0.6)
-                Text(value).font(.subheadline.weight(.semibold)).minimumScaleFactor(0.7)
-            }
+    private var heroChips: some View {
+        HStack(spacing: 10) {
+            MetricChip(title: "收入", value: store.money(store.income), icon: "arrow.down.left", gradient: Palette.income)
+            MetricChip(title: "支出", value: store.money(store.expense), icon: "arrow.up.right", gradient: Palette.expense)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.black.opacity(0.06), in: RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: 快捷操作
 
     private var quickActions: some View {
-        GlassEffectContainer(spacing: 14) {
-            HStack(spacing: 14) {
-                quickAction(title: "记账", symbol: "plus", color: .blue, action: actions.add)
-                quickAction(title: "扫描", symbol: "camera.viewfinder", color: .orange, action: actions.scan)
-                quickAction(title: "预算", symbol: "target", color: .green, action: actions.budget)
+        GlassEffectContainer(spacing: 12) {
+            HStack(spacing: 12) {
+                quickAction(title: "记账", symbol: "square.and.pencil", action: actions.add)
+                quickAction(title: "扫描", symbol: "camera.viewfinder", action: actions.scan)
+                quickAction(title: "预算", symbol: "target", action: actions.budget)
+                quickAction(title: "周期", symbol: "arrow.triangle.2.circlepath", action: actions.recurring)
             }
         }
     }
 
-    private func quickAction(title: String, symbol: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func quickAction(title: String, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(color)
-                Text(title).font(.caption)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Palette.primary)
+                    .frame(width: 42, height: 42)
+                    .innerTile(Radius.chip, opacity: 0.14)
+                Text(title)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.ink.opacity(0.85))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
-        .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: 20))
+        .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         .glassEffectUnion(id: "quickActions", namespace: namespace)
+    }
+
+    // MARK: 支出趋势
+
+    private var trendCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "近 7 日支出",
+                          subtitle: "日均 " + store.money(store.dailyAverage),
+                          action: actions.openList,
+                          actionTitle: "看明细")
+            MiniBarChart(points: store.last7Days())
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlass(.regular.tint(Palette.glassTint), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     // MARK: 今日明细
 
     private var todayList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("今日明细").font(.title3.weight(.semibold))
-                Spacer()
-                Text("\(store.todayTxs.count) 笔").font(.caption).opacity(0.6)
-            }
+            SectionHeader(title: "今日明细",
+                          subtitle: "共 " + String(store.todayTxs.count) + " 笔",
+                          action: actions.openList,
+                          actionTitle: "全部")
             if store.todayTxs.isEmpty {
-                Text("今天还没有记账，点右下角 + 试试")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .liquidGlass(.clear, in: RoundedRectangle(cornerRadius: 18))
+                VStack {
+                    BuddyHint(mood: .sleepy, title: "今天还没有记账", subtitle: "点右下角 + 记一笔，小紫帮你攒钱")
+                        .padding(.vertical, 18)
+                }
+                .frame(maxWidth: .infinity)
+                .liquidGlass(.clear, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
             } else {
                 GlassEffectContainer(spacing: 10) {
                     VStack(spacing: 10) {
@@ -325,41 +476,150 @@ struct HomePage: View {
     }
 }
 
+
+// MARK: - 指标小卡
+
+struct MetricChip: View {
+    let title: String
+    let value: String
+    let icon: String
+    let gradient: LinearGradient
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 26, height: 26)
+                .background(gradient, in: Circle())
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 10, design: .rounded))
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+                Text(value)
+                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .foregroundStyle(Palette.ink)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .innerTile(Radius.chip, opacity: 0.12)
+    }
+}
+
+// MARK: - 预算进度环
+
+struct BudgetRing: View {
+    var progress: Double
+    var size: CGFloat = 66
+    var label: String
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.5), lineWidth: size * 0.13)
+            Circle()
+                .trim(from: 0, to: max(min(progress, 1), 0.02))
+                .stroke(AngularGradient(colors: [Palette.mint, Palette.primarySoft, Palette.primary, Palette.rose],
+                                        center: .center),
+                        style: StrokeStyle(lineWidth: size * 0.13, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: -2) {
+                Text(label)
+                    .font(.system(size: size * 0.26, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Palette.ink)
+                Text("已用")
+                    .font(.system(size: size * 0.16, design: .rounded))
+                    .foregroundStyle(Palette.ink.opacity(0.55))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 // MARK: - 明细行
 
 struct TxRow: View {
     let tx: Tx
-    let namespace: Namespace.ID
+    var namespace: Namespace.ID
+    var showsTags: Bool = false
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Image(systemName: tx.symbol)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 40, height: 40)
-                    .background(Color.black.opacity(0.08), in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tx.title).font(.body.weight(.medium))
-                    Text(tx.category).font(.caption).opacity(0.6)
-                }
-                Spacer()
-                Text(amountText)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(tx.isIncome ? Color.green : Color.red)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Palette.categoryGradient(tx.category), in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
+                info
+                Spacer(minLength: 6)
+                Text(tx.shortAmount)
+                    .font(.system(.footnote, design: .rounded).weight(.bold))
+                    .foregroundStyle(tx.isIncome ? Palette.mint : Palette.rose)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .padding(14)
-            .contentShape(RoundedRectangle(cornerRadius: 18))
+            .padding(13)
+            .contentShape(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         }
         .buttonStyle(.plain)
-        .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: 18))
+        .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         .glassEffectID(tx.id, in: namespace)
-        .glassEffectUnion(id: "todayList", namespace: namespace)
+        .glassEffectUnion(id: "txRow", namespace: namespace)
     }
 
-    private var amountText: String {
-        let text = String(format: "%.2f", abs(tx.amount))
-        return (tx.amount >= 0 ? "+ " : "- ") + "\u{00A5} " + text
+    private var info: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Text(tx.title)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                if tx.autoPosted {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Palette.primary)
+                }
+            }
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(Palette.ink.opacity(0.55))
+                .lineLimit(1)
+            if showsTags && !tx.tags.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(tx.tags.prefix(3), id: \.self) { tag in
+                        TagChip(text: tag)
+                    }
+                }
+            }
+        }
+    }
+
+    private var subtitle: String {
+        var parts: [String] = [tx.category]
+        if !tx.merchant.isEmpty { parts.append(tx.merchant) }
+        if tx.currency != .cny { parts.append(tx.currency.rawValue) }
+        parts.append(tx.date.formatted(date: .omitted, time: .shortened))
+        return parts.joined(separator: " · ")
+    }
+}
+
+
+struct TagChip: View {
+    let text: String
+
+    var body: some View {
+        Text("#" + text)
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .foregroundStyle(Palette.primary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Palette.primary.opacity(0.13), in: Capsule())
     }
 }
 
@@ -373,12 +633,15 @@ struct TabItem: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 Image(systemName: tab.icon)
-                Text(tab.title).font(.caption2)
+                    .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
+                Text(tab.title)
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular, design: .rounded))
             }
+            .foregroundStyle(isSelected ? Palette.primary : Palette.ink.opacity(0.55))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -388,10 +651,10 @@ struct TabItem: View {
     }
 
     private var glass: Glass {
-        isSelected ? .regular.interactive() : .clear.interactive()
+        isSelected ? .regular.tint(Palette.glassTint).interactive() : .clear.interactive()
     }
 
     private var glassID: String {
-        isSelected ? "tab-selected-\(tab.id)" : "tab-\(tab.id)"
+        isSelected ? "tab-selected-" + String(tab.id) : "tab-" + String(tab.id)
     }
 }

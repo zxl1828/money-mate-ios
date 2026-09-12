@@ -1,39 +1,43 @@
 import SwiftUI
 
-/// 明亮、有光的渐变背景：让玻璃的“高通透、可见背景内容”效果成立。
+/// 紫色流光背景：明亮通透，让液态玻璃的高通透感成立
 struct GlassBackground: View {
+    @State private var drift = false
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.62, green: 0.78, blue: 0.95),
-                    Color(red: 0.95, green: 0.83, blue: 0.72),
-                    Color(red: 0.80, green: 0.90, blue: 0.86)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            LinearGradient(colors: [Palette.lavender, Palette.lilac, Color(red: 0.90, green: 0.87, blue: 1.00)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
 
             GeometryReader { proxy in
+                let w = proxy.size.width
+                let h = proxy.size.height
                 Circle()
-                    .fill(Color.white.opacity(0.55))
-                    .frame(width: proxy.size.width * 0.7)
-                    .blur(radius: 70)
-                    .position(x: proxy.size.width * 0.25, y: proxy.size.height * 0.2)
-
-                Circle()
-                    .fill(Color(red: 0.4, green: 0.6, blue: 1.0).opacity(0.55))
-                    .frame(width: proxy.size.width * 0.6)
+                    .fill(Palette.primarySoft.opacity(0.60))
+                    .frame(width: w * 0.86)
                     .blur(radius: 80)
-                    .position(x: proxy.size.width * 0.8, y: proxy.size.height * 0.55)
-
+                    .position(x: w * (drift ? 0.30 : 0.16), y: h * 0.16)
                 Circle()
-                    .fill(Color(red: 1.0, green: 0.5, blue: 0.4).opacity(0.45))
-                    .frame(width: proxy.size.width * 0.55)
-                    .blur(radius: 75)
-                    .position(x: proxy.size.width * 0.35, y: proxy.size.height * 0.85)
+                    .fill(Color.white.opacity(0.75))
+                    .frame(width: w * 0.72)
+                    .blur(radius: 70)
+                    .position(x: w * (drift ? 0.70 : 0.86), y: h * (drift ? 0.46 : 0.34))
+                Circle()
+                    .fill(Palette.rose.opacity(0.32))
+                    .frame(width: w * 0.60)
+                    .blur(radius: 85)
+                    .position(x: w * (drift ? 0.42 : 0.28), y: h * (drift ? 0.88 : 0.76))
+                Circle()
+                    .fill(Palette.primary.opacity(0.32))
+                    .frame(width: w * 0.56)
+                    .blur(radius: 90)
+                    .position(x: w * (drift ? 0.86 : 0.68), y: h * (drift ? 0.84 : 0.96))
             }
+
+            DoodleLayer()
         }
         .ignoresSafeArea()
+        .animation(.easeInOut(duration: 22).repeatForever(autoreverses: true), value: drift)
+        .onAppear { drift = true }
     }
 }
