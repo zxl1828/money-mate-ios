@@ -125,7 +125,7 @@ struct ContentView: View {
     private var balanceCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             balanceTitle
-            Text("\u00a5 128,640.00")
+            Text("\u{00A5} 128,640.00")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.6)
             balanceStats
@@ -148,8 +148,8 @@ struct ContentView: View {
 
     private var balanceStats: some View {
         HStack(spacing: 8) {
-            statChip(label: "收入", value: "\u00a5 45,000", symbol: "arrow.down.right", color: .green)
-            statChip(label: "支出", value: "\u00a5 12,330", symbol: "arrow.up.right", color: .red)
+            statChip(label: "收入", value: "\u{00A5} 45,000", symbol: "arrow.down.right", color: .green)
+            statChip(label: "支出", value: "\u{00A5} 12,330", symbol: "arrow.up.right", color: .red)
         }
     }
 
