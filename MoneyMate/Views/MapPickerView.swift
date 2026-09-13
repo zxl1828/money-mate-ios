@@ -273,8 +273,12 @@ struct MapPickerView: View {
     private func select(_ completion: MKLocalSearchCompletion) {
         let text = completion.subtitle.isEmpty ? completion.title : completion.title + " " + completion.subtitle
         hint = "正在定位搜索结果…"
-        CLGeocoder().geocodeAddressString(text) { placemarks, _ in
-            guard let coordinate = placemarks?.first?.location?.coordinate else {
+        guard let request = MKGeocodingRequest(addressString: text) else {
+            hint = "没能定位这个搜索结果，试试直接拖动地图"
+            return
+        }
+        request.getMapItems { items, _ in
+            guard let coordinate = items?.first?.location.coordinate else {
                 hint = "没能定位这个搜索结果，试试直接拖动地图"
                 return
             }

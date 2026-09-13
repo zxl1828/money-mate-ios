@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 import MapKit
 
-// MARK: - 地点服务（CoreLocation + CLGeocoder，纯系统 API）
+// MARK: - 地点服务（CoreLocation 定位 + MapKit 反查地址，纯系统 API）
 
 /// 定位 / 反查地址。
 /// 全部使用系统回调式 API（主线程回调），避免并发 Sendable 问题。
@@ -20,7 +20,6 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     @Published var errorText: String?
 
     private let manager = CLLocationManager()
-    private let geocoder = CLGeocoder()
 
     override init() {
         super.init()
@@ -69,13 +68,10 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
         coordinate = location.coordinate
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
-            let text = placemarks?.first.map(LocationService.format)
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.busy = false
-                if let text, !text.isEmpty { self.address = text }
-            }
+        LocationService.reverse(location) { [weak self] text in
+            guard let self else { return }
+            self.busy = false
+            if let text, !text.isEmpty { self.address = text }
         }
     }
 
@@ -89,26 +85,28 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     /// 坐标 -> 中文地址（地图选点时用）
     static func address(for coordinate: CLLocationCoordinate2D,
                         completion: @escaping (String?) -> Void) {
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        CLGeocoder().reverseGeocodeLocation(location) { placemarks, _ in
-            let text = placemarks?.first.map(LocationService.format)
-            DispatchQueue.main.async { completion(text) }
+        reverse(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude),
+                completion: completion)
+    }
+
+    /// 坐标 -> 一行地址（iOS 26 的 MKReverseGeocodingRequest，回调在主线程）
+    static func reverse(_ location: CLLocation,
+                        completion: @escaping (String?) -> Void) {
+        guard let request = MKReverseGeocodingRequest(location: location) else {
+            completion(nil)
+            return
+        }
+        request.getMapItems { items, _ in
+            completion(items?.first.map(LocationService.format))
         }
     }
 
-    /// 把 CLPlacemark 拼成一行中文地址
-    static func format(_ placemark: CLPlacemark) -> String {
-        var parts: [String] = []
-        func add(_ value: String?) {
-            guard let value else { return }
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, !parts.contains(trimmed) else { return }
-            parts.append(trimmed)
-        }
-        add(placemark.name)
-        add(placemark.subLocality)
-        add(placemark.locality)
-        add(placemark.administrativeArea)
-        return parts.joined(separator: " · ")
+    /// 把 MKMapItem 拼成一行中文地址
+    static func format(_ item: MKMapItem) -> String {
+        let text = item.addressRepresentations?
+            .fullAddress(includingRegion: false, singleLine: true)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let text, !text.isEmpty { return text }
+        return item.name ?? ""
     }
 }
