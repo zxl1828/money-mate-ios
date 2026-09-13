@@ -351,9 +351,6 @@ struct AddSheet: View {
     private var divider: some View {
         Rectangle().fill(Palette.ink.opacity(0.08)).frame(height: 1)
     }
-    private var divider: some View {
-        Rectangle().fill(Palette.ink.opacity(0.08)).frame(height: 1)
-    }
 
     private func field(title: String, placeholder: String, text: Binding<String>) -> some View {
         HStack(spacing: 10) {
