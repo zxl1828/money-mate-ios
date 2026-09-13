@@ -3,15 +3,15 @@ import SwiftUI
 // MARK: - 紫色主题色板（全局统一）
 
 enum Palette {
-    static let primary = Color(red: 0.47, green: 0.33, blue: 0.98)
-    static let primaryDeep = Color(red: 0.29, green: 0.17, blue: 0.72)
-    static let primarySoft = Color(red: 0.69, green: 0.59, blue: 1.00)
-    static let lilac = Color(red: 0.85, green: 0.81, blue: 1.00)
-    static let lavender = Color(red: 0.95, green: 0.93, blue: 1.00)
-    static let mint = Color(red: 0.36, green: 0.87, blue: 0.75)
-    static let rose = Color(red: 1.00, green: 0.47, blue: 0.68)
-    static let ink = Color(red: 0.19, green: 0.14, blue: 0.33)
-    static let glassTint = Color.white.opacity(0.24)
+    static let primary = Color(red: 0.58, green: 0.47, blue: 0.99)
+    static let primaryDeep = Color(red: 0.45, green: 0.34, blue: 0.88)
+    static let primarySoft = Color(red: 0.74, green: 0.66, blue: 1.00)
+    static let lilac = Color(red: 0.90, green: 0.87, blue: 1.00)
+    static let lavender = Color(red: 0.97, green: 0.96, blue: 1.00)
+    static let mint = Color(red: 0.42, green: 0.89, blue: 0.79)
+    static let rose = Color(red: 1.00, green: 0.55, blue: 0.74)
+    static let ink = Color(red: 0.24, green: 0.20, blue: 0.40)
+    static let glassTint = Color.white.opacity(0.30)
 
     static let hero = LinearGradient(colors: [primarySoft, primary, primaryDeep],
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -24,17 +24,17 @@ enum Palette {
 
     static func categoryColor(_ name: String) -> Color {
         switch name {
-        case "餐饮": return Color(red: 1.00, green: 0.57, blue: 0.38)
+        case "餐饮": return Color(red: 1.00, green: 0.65, blue: 0.47)
         case "交通": return Color(red: 0.42, green: 0.72, blue: 1.00)
-        case "购物": return Color(red: 0.80, green: 0.46, blue: 0.98)
+        case "购物": return Color(red: 0.85, green: 0.57, blue: 0.99)
         case "居家": return Color(red: 0.42, green: 0.84, blue: 0.78)
         case "娱乐": return Color(red: 1.00, green: 0.44, blue: 0.70)
-        case "医疗": return Color(red: 0.96, green: 0.45, blue: 0.45)
-        case "学习": return Color(red: 0.56, green: 0.61, blue: 0.99)
+        case "医疗": return Color(red: 0.98, green: 0.55, blue: 0.57)
+        case "学习": return Color(red: 0.67, green: 0.71, blue: 1.00)
         case "旅行": return Color(red: 0.36, green: 0.80, blue: 0.92)
         case "宠物": return Color(red: 0.98, green: 0.71, blue: 0.42)
         case "工资": return Palette.mint
-        case "理财": return Color(red: 0.64, green: 0.53, blue: 0.99)
+        case "理财": return Color(red: 0.73, green: 0.64, blue: 1.00)
         default: return Palette.primarySoft
         }
     }

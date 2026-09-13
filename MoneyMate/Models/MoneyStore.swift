@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 // MARK: - 币种（离线参考汇率，录入时锁定）
 
@@ -96,6 +97,8 @@ struct Tx: Identifiable, Codable, Hashable {
     var note: String
     var tags: [String]
     var location: String
+    var latitude: Double?       // 地点纬度（可选）
+    var longitude: Double?      // 地点经度（可选）
     var recurrence: Recurrence
     var sourceID: UUID?         // 周期账单母单
     var autoPosted: Bool        // 是否为自动补录
@@ -111,6 +114,8 @@ struct Tx: Identifiable, Codable, Hashable {
          note: String = "",
          tags: [String] = [],
          location: String = "",
+         latitude: Double? = nil,
+         longitude: Double? = nil,
          recurrence: Recurrence = .none,
          sourceID: UUID? = nil,
          autoPosted: Bool = false) {
@@ -125,6 +130,8 @@ struct Tx: Identifiable, Codable, Hashable {
         self.note = note
         self.tags = tags
         self.location = location
+        self.latitude = latitude
+        self.longitude = longitude
         self.recurrence = recurrence
         self.sourceID = sourceID
         self.autoPosted = autoPosted
@@ -132,7 +139,7 @@ struct Tx: Identifiable, Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, rate, category, date
-        case merchant, note, tags, location, recurrence, sourceID, autoPosted
+        case merchant, note, tags, location, latitude, longitude, recurrence, sourceID, autoPosted
     }
 
     // 兼容旧版本存档：缺失字段一律回落默认值
@@ -150,6 +157,8 @@ struct Tx: Identifiable, Codable, Hashable {
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
         tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
         location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
+        latitude = try c.decodeIfPresent(Double.self, forKey: .latitude)
+        longitude = try c.decodeIfPresent(Double.self, forKey: .longitude)
         recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence) ?? .none
         sourceID = try c.decodeIfPresent(UUID.self, forKey: .sourceID)
         autoPosted = try c.decodeIfPresent(Bool.self, forKey: .autoPosted) ?? false
@@ -158,6 +167,15 @@ struct Tx: Identifiable, Codable, Hashable {
     var isIncome: Bool { amount >= 0 }
     var amountCNY: Double { amount * rate }
     var symbol: String { Tx.symbol(for: category) }
+
+    /// 是否记录了精确坐标
+    var hasCoordinate: Bool { latitude != nil && longitude != nil }
+
+    /// 地图回看用的坐标
+    var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
 
     /// 展示金额：外币会同时给出折合人民币
     var displayAmount: String {

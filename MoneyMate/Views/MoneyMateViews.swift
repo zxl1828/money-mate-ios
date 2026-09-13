@@ -596,10 +596,17 @@ struct TxRow: View {
                         .foregroundStyle(Palette.primary)
                 }
             }
-            Text(subtitle)
-                .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.55))
-                .lineLimit(1)
+            HStack(spacing: 4) {
+                if !tx.location.isEmpty {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(Palette.primary.opacity(0.85))
+                }
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .lineLimit(1)
+            }
             if showsTags && !tx.tags.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(tx.tags.prefix(3), id: \.self) { tag in

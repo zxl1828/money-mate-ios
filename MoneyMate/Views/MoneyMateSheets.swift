@@ -1,5 +1,7 @@
 import SwiftUI
 import PhotosUI
+import MapKit
+import CoreLocation
 
 // MARK: - 记一笔 / 编辑
 
@@ -17,6 +19,13 @@ struct AddSheet: View {
     @State private var merchant = ""
     @State private var note = ""
     @State private var location = ""
+    @State private var latitude: Double?
+    @State private var longitude: Double?
+    @State private var locationTouched = false
+    @State private var autoLocated = false
+    @State private var showMapPicker = false
+    @State private var waitingForLocation = false
+    @StateObject private var locator = LocationService()
     @State private var tags: [String] = []
     @State private var tagInput = ""
     @State private var date = Date()
@@ -34,6 +43,8 @@ struct AddSheet: View {
         _merchant = State(initialValue: editing?.merchant ?? "")
         _note = State(initialValue: editing?.note ?? "")
         _location = State(initialValue: editing?.location ?? "")
+        _latitude = State(initialValue: editing?.latitude)
+        _longitude = State(initialValue: editing?.longitude)
         _tags = State(initialValue: editing?.tags ?? [])
         _date = State(initialValue: editing?.date ?? Date())
         _recurrence = State(initialValue: editing?.recurrence ?? .none)
@@ -50,6 +61,7 @@ struct AddSheet: View {
                     categoryGrid
                     currencyCard
                     detailCard
+                    locationCard
                     tagCard
                     scheduleCard
                     if let errorText {
@@ -72,6 +84,25 @@ struct AddSheet: View {
                     Button("取消") { dismiss() }
                 }
             }
+        }
+        .sheet(isPresented: $showMapPicker) {
+            MapPickerView(initialCoordinate: currentCoordinate, initialAddress: location) { name, lat, lon in
+                locationTouched = true
+                autoLocated = false
+                location = name
+                latitude = lat
+                longitude = lon
+            }
+        }
+        .task {
+            // 没编辑过就默认用当时的定位
+            guard location.isEmpty, latitude == nil else { return }
+            locateNow()
+        }
+        .onChange(of: locator.address) { _, newValue in
+            guard let coordinate = locator.coordinate, !newValue.isEmpty else { return }
+            guard waitingForLocation || !locationTouched else { return }
+            applyLocation(newValue, coordinate)
         }
     }
 
@@ -191,8 +222,6 @@ struct AddSheet: View {
             divider
             field(title: "商户", placeholder: "例如 星巴克", text: $merchant)
             divider
-            field(title: "地点", placeholder: "例如 国贸店", text: $location)
-            divider
             field(title: "备注", placeholder: "记点什么", text: $note)
             divider
             HStack {
@@ -208,6 +237,120 @@ struct AddSheet: View {
         .glassPanel(Radius.card, strong: true)
     }
 
+    private var locationCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("地点").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                if autoLocated {
+                    Text("自动定位")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.primary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Palette.primary.opacity(0.13), in: Capsule())
+                }
+                Spacer()
+                if locator.busy { ProgressView().controlSize(.mini) }
+            }
+
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Palette.primary)
+                TextField("地址 / 地点名称", text: locationBinding)
+                    .textFieldStyle(.plain)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(Palette.ink)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .innerTile(Radius.chip, opacity: 0.10)
+
+            if let latitude, let longitude {
+                Map(initialPosition: .camera(MapCamera(centerCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                                                      distance: 700)),
+                    interactionModes: []) {
+                    Marker("地点", coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude))
+                        .tint(Palette.primary)
+                }
+                .frame(height: 132)
+                .clipShape(squircle(Radius.chip))
+                .allowsHitTesting(false)
+                .overlay(alignment: .bottomTrailing) {
+                    Text(String(format: "%.5f, %.5f", latitude, longitude))
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.75))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(8)
+                }
+            }
+
+            HStack(spacing: 10) {
+                locationAction(title: "使用当前定位", icon: "location.fill") { locateNow() }
+                locationAction(title: "地图选点", icon: "map.fill") { showMapPicker = true }
+            }
+
+            if !locator.busy, latitude == nil, let text = locator.errorText {
+                Text(text)
+                    .font(.caption2)
+                    .foregroundStyle(Palette.rose)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    private func locationAction(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                Text(title).font(.system(.footnote, design: .rounded).weight(.semibold))
+            }
+            .foregroundStyle(Palette.primary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+        }
+        .buttonStyle(.plain)
+        .liquidGlass(.clear.interactive(), in: Capsule())
+    }
+
+    private var locationBinding: Binding<String> {
+        Binding(get: { location },
+                set: { newValue in
+                    location = newValue
+                    locationTouched = true
+                    autoLocated = false
+                })
+    }
+
+    private var currentCoordinate: CLLocationCoordinate2D? {
+        if let latitude, let longitude {
+            return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        }
+        return locator.coordinate
+    }
+
+    /// 主动取一次定位（覆盖已有内容）
+    private func locateNow() {
+        locationTouched = false
+        waitingForLocation = true
+        locator.requestCurrent()
+    }
+
+    private func applyLocation(_ text: String, _ coordinate: CLLocationCoordinate2D) {
+        location = text
+        latitude = coordinate.latitude
+        longitude = coordinate.longitude
+        autoLocated = true
+        waitingForLocation = false
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Palette.ink.opacity(0.08)).frame(height: 1)
+    }
     private var divider: some View {
         Rectangle().fill(Palette.ink.opacity(0.08)).frame(height: 1)
     }
@@ -382,6 +525,8 @@ struct AddSheet: View {
                     note: note,
                     tags: tags,
                     location: location,
+                    latitude: latitude,
+                    longitude: longitude,
                     recurrence: recurrence,
                     sourceID: editing?.sourceID,
                     autoPosted: false)
@@ -918,6 +1063,7 @@ struct DetailSheet: View {
     var onEdit: (Tx) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack {
@@ -925,6 +1071,7 @@ struct DetailSheet: View {
                 VStack(spacing: 16) {
                     headCard
                     infoCard
+                    mapCard
                     actionRow
                 }
                 .padding(20)
@@ -967,6 +1114,40 @@ struct DetailSheet: View {
         .padding(20)
         .frame(maxWidth: .infinity)
         .glassPanel(Radius.card, strong: true)
+    }
+
+    @ViewBuilder
+    private var mapCard: some View {
+        if let coordinate = tx.coordinate {
+            Map(initialPosition: .camera(MapCamera(centerCoordinate: coordinate, distance: 700)),
+                interactionModes: [.pan, .zoom]) {
+                Marker(tx.location.isEmpty ? "记账地点" : tx.location, coordinate: coordinate)
+                    .tint(Palette.primary)
+            }
+            .frame(height: 196)
+            .clipShape(squircle(Radius.card))
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    let name = tx.location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if let url = URL(string: "https://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(name)") {
+                        openURL(url)
+                    }
+                } label: {
+                    Label("在地图中打开", systemImage: "arrow.up.right.square")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Palette.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .stroke(Palette.ink.opacity(0.06), lineWidth: 1)
+            }
+        }
     }
 
     private var infoCard: some View {
