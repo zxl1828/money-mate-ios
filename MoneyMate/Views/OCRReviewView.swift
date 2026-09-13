@@ -249,7 +249,14 @@ struct OCRReviewView: View {
 
     @discardableResult
     private func importAll() -> Int {
-        let items = BillParser.merge(drafts)
+        var items = BillParser.merge(drafts)
+        let fallback = store.activeAccounts.first { $0.kind == .wallet } ?? store.activeAccounts.first
+        for i in items.indices {
+            if items[i].accountID == nil { items[i].accountID = fallback?.id }
+            items[i].kind = items[i].amount >= 0 ? .income : .expense
+            items[i].updatedAt = Date()
+            items[i].memberName = store.myName
+        }
         for tx in items { store.add(tx) }
         return items.count
     }

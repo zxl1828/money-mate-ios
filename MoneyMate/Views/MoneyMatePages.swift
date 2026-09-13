@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import UIKit
 import UniformTypeIdentifiers
 
 // MARK: - 统计区间
@@ -43,7 +44,7 @@ extension MoneyStore {
         return stride(from: range.days - 1, through: 0, by: -1).compactMap { offset -> StatsPoint? in
             guard let day = cal.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
             let list = txs.filter { cal.isDate($0.date, inSameDayAs: day) }
-            let exp = list.filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY }
+            let exp = list.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
             let inc = list.filter { $0.isIncome }.reduce(0) { $0 + $1.amountCNY }
             return StatsPoint(label: fmt.string(from: day), expense: exp, income: inc)
         }
@@ -54,7 +55,7 @@ extension MoneyStore {
     }
 
     func rangeExpense(_ range: StatsRange) -> Double {
-        rangeTx(range).filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY }
+        rangeTx(range).filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
     }
 
     func rangeIncome(_ range: StatsRange) -> Double {
@@ -63,14 +64,14 @@ extension MoneyStore {
 
     func rangeCategories(_ range: StatsRange) -> [CategoryTotal] {
         var bucket: [String: Double] = [:]
-        for tx in rangeTx(range) where !tx.isIncome {
+        for tx in rangeTx(range) where tx.isExpense {
             bucket[tx.category, default: 0] += -tx.amountCNY
         }
         return bucket.map { CategoryTotal(label: $0.key, value: $0.value) }.sorted { $0.value > $1.value }
     }
 
     func rangeTopExpense(_ range: StatsRange) -> Tx? {
-        rangeTx(range).filter { !$0.isIncome }.min { $0.amountCNY < $1.amountCNY }
+        rangeTx(range).filter { $0.isExpense }.min { $0.amountCNY < $1.amountCNY }
     }
 
     /// 小紫的账单洞察
@@ -331,13 +332,13 @@ struct TransactionsPage: View {
         let base = store.filter(query: query, category: category, month: selectedMonth, onlyRecurring: onlyRecurring)
         switch type {
         case .all: return base
-        case .expense: return base.filter { !$0.isIncome }
+        case .expense: return base.filter { $0.isExpense }
         case .income: return base.filter { $0.isIncome }
         }
     }
 
     private var filteredExpense: Double {
-        filtered.filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY }
+        filtered.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
     }
 
     private var filteredIncome: Double {
@@ -740,6 +741,10 @@ struct SettingsPage: View {
     @State private var showExport = false
     @State private var showImport = false
     @State private var showCategoryBudget = false
+    @State private var showCategories = false
+    @State private var showLedgerMerge = false
+    @State private var shareFile: ShareFile?
+    @ObservedObject private var cloud = CloudSyncService.shared
 
     var body: some View {
         ScrollView {
@@ -747,6 +752,9 @@ struct SettingsPage: View {
                 profileCard
                 budgetCard
                 prefsCard
+                reminderCard
+                toolsCard
+                ledgerCard
                 dataCard
                 aboutCard
             }
@@ -775,6 +783,31 @@ struct SettingsPage: View {
         }
         .sheet(isPresented: $showCategoryBudget) {
             CategoryBudgetSheet(store: store)
+        }
+        .sheet(isPresented: $showCategories) {
+            CategoryManagerSheet(store: store)
+        }
+        .sheet(item: $shareFile) { file in
+            ShareSheet(items: [file.url])
+        }
+        .fileImporter(isPresented: $showLedgerMerge, allowedContentTypes: [.json]) { result in
+            handleLedgerMerge(result)
+        }
+    }
+
+    private func handleLedgerMerge(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else { toast("文件读不出来"); return }
+            if let report = SharedLedgerService.merge(data, into: store) {
+                toast("已合并：新增 \(report.addedTx) 笔，更新 \(report.updatedTx) 笔")
+            } else {
+                toast("不是 MoneyMate 共享包")
+            }
+        case .failure:
+            toast("导入已取消")
         }
     }
 
@@ -864,17 +897,172 @@ struct SettingsPage: View {
 
     private var prefsCard: some View {
         VStack(spacing: 2) {
-            toggleRow(title: "账单通知提醒", icon: "bell.badge.fill", isOn: $store.notifyEnabled)
+            appearanceRow
             divider
             toggleRow(title: "启动隐私锁（面容 / 指纹）", icon: "faceid", isOn: $store.privacyLock)
             divider
             toggleRow(title: "震动反馈", icon: "iphone.radiowaves.left.and.right", isOn: $store.hapticsEnabled)
             divider
             toggleRow(title: "周期账单自动补录", icon: "arrow.triangle.2.circlepath", isOn: $store.recurringEnabled)
-            divider
-            toggleRow(title: "云端同步（即将上线）", icon: "icloud.fill", isOn: $store.cloudSync)
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 深色 / 浅色 / 跟随系统
+    private var appearanceRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: store.appearance.icon)
+                .foregroundStyle(Palette.primary)
+                .frame(width: 22)
+            Text("外观")
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 8)
+            Picker("外观", selection: $store.appearance) {
+                ForEach(AppearanceMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 210)
+        }
+        .padding(.vertical, 9)
+    }
+
+    /// 本地提醒（全部离线，不需要账号）
+    private var reminderCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "提醒", subtitle: "本地通知，不上传任何数据")
+            toggleRow(title: "每日记账提醒", icon: "bell.badge.fill", isOn: $store.dailyReminder)
+            if store.dailyReminder {
+                HStack(spacing: 10) {
+                    Image(systemName: "clock.fill").foregroundStyle(Palette.primary)
+                    DatePicker("提醒时间",
+                               selection: Binding(get: {
+                                   Calendar.current.date(bySettingHour: store.dailyReminderHour,
+                                                         minute: store.dailyReminderMinute,
+                                                         second: 0, of: Date()) ?? Date()
+                               }, set: { newValue in
+                                   let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                                   store.dailyReminderHour = comps.hour ?? 21
+                                   store.dailyReminderMinute = comps.minute ?? 0
+                               }),
+                               displayedComponents: .hourAndMinute)
+                        .font(.system(.subheadline, design: .rounded))
+                }
+                .padding(.leading, 34)
+            }
+            divider
+            toggleRow(title: "超预算提醒", icon: "exclamationmark.triangle.fill", isOn: $store.budgetAlert)
+            divider
+            toggleRow(title: "信用卡还款提醒", icon: "creditcard.fill", isOn: $store.creditAlert)
+            Button {
+                Task { @MainActor in
+                    let ok = await NotificationService.shared.requestPermission()
+                    NotificationService.shared.reschedule(store: store)
+                    toast(ok ? "通知已开启" : "请在系统设置里允许通知")
+                }
+            } label: {
+                Label("开启系统通知权限", systemImage: "bell.and.waves.left.and.right.fill")
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+            }
+            .buttonStyle(.plain)
+            .innerTile(Radius.button, opacity: 0.10)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 分类与导出
+    private var toolsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "分类与导出", subtitle: "自定义分类、导出 CSV 给 Excel")
+            glassRow(title: "分类管理", systemImage: "square.grid.2x2.fill") {
+                showCategories = true
+            }
+            glassRow(title: "导出 CSV（Excel 可打开）", systemImage: "tablecells") {
+                if let url = ExportService.csvFile(store: store) {
+                    shareFile = ShareFile(url: url)
+                } else {
+                    toast("导出失败")
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 共享账本 + iCloud
+    private var ledgerCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "共享账本", subtitle: store.ledgerName + " \u{00B7} " + String(store.members.count) + " 人")
+            Text("各自在自己手机上记，再用「共享包」合并成一本账；同一条记录以最后修改的为准，不会重复入账。")
+                .font(.caption2)
+                .foregroundStyle(Palette.ink.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Text("账本名").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                TextField("账本名", text: $store.ledgerName)
+                    .textFieldStyle(.plain)
+                    .font(.system(.subheadline, design: .rounded))
+                Spacer(minLength: 0)
+                Text("我").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                TextField("称呼", text: $store.myName)
+                    .textFieldStyle(.plain)
+                    .font(.system(.subheadline, design: .rounded))
+                    .frame(maxWidth: 70)
+            }
+            .padding(.vertical, 6)
+            glassRow(title: "导出共享包给对方", systemImage: "square.and.arrow.up.on.square") {
+                if let data = SharedLedgerService.exportPackage(store: store) {
+                    let url = FileManager.default.temporaryDirectory
+                        .appendingPathComponent(SharedLedgerService.suggestedFileName(store: store))
+                    do {
+                        try data.write(to: url, options: .atomic)
+                        shareFile = ShareFile(url: url)
+                    } catch {
+                        toast("导出失败")
+                    }
+                } else {
+                    toast("导出失败")
+                }
+            }
+            glassRow(title: "合并对方的共享包", systemImage: "arrow.triangle.merge") {
+                showLedgerMerge = true
+            }
+            divider
+            toggleRow(title: "iCloud 同步（同账号多设备）", icon: "icloud.fill", isOn: $store.cloudSync)
+            Text(cloud.status.text)
+                .font(.caption2)
+                .foregroundStyle(Palette.ink.opacity(0.6))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if store.cloudSync {
+                HStack(spacing: 10) {
+                    glassButton(title: "立即上传", systemImage: "icloud.and.arrow.up") {
+                        if let data = store.exportJSON() {
+                            cloud.push(data: data)
+                            toast("已上传到 iCloud")
+                        }
+                    }
+                    glassButton(title: "从 iCloud 恢复", systemImage: "icloud.and.arrow.down") {
+                        if let data = cloud.remotePayload(), store.importJSON(data) {
+                            toast("已从 iCloud 恢复")
+                        } else {
+                            toast("云端还没有账本")
+                        }
+                    }
+                }
+            }
+        }
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
     }
@@ -1035,4 +1223,21 @@ struct CategoryBudgetSheet: View {
         Binding(get: { store.budgetByCategory[name] ?? 0 },
                 set: { store.budgetByCategory[name] = $0 })
     }
+}
+
+// MARK: - 分享文件（CSV / 共享包）
+
+struct ShareFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

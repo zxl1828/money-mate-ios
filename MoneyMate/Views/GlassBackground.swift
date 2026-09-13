@@ -6,7 +6,7 @@ struct GlassBackground: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Palette.lavender, Palette.lilac, Color(red: 0.90, green: 0.87, blue: 1.00)],
+            LinearGradient(colors: [Palette.lavender, Palette.lilac, Palette.lilac],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
 
             GeometryReader { proxy in
@@ -18,7 +18,7 @@ struct GlassBackground: View {
                     .blur(radius: 80)
                     .position(x: w * (drift ? 0.30 : 0.16), y: h * 0.16)
                 Circle()
-                    .fill(Color.white.opacity(0.75))
+                    .fill(Palette.blobLight.opacity(0.75))
                     .frame(width: w * 0.72)
                     .blur(radius: 70)
                     .position(x: w * (drift ? 0.70 : 0.86), y: h * (drift ? 0.46 : 0.34))

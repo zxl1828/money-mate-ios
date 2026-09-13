@@ -28,7 +28,7 @@ enum Biometrics {
 // MARK: - 标签
 
 enum MoneyTab: Int, CaseIterable, Identifiable {
-    case home = 0, list, stats, settings
+    case home = 0, list, assets, stats, settings
 
     var id: Int { rawValue }
 
@@ -36,6 +36,7 @@ enum MoneyTab: Int, CaseIterable, Identifiable {
         switch self {
         case .home: return "首页"
         case .list: return "明细"
+        case .assets: return "资产"
         case .stats: return "统计"
         case .settings: return "我的"
         }
@@ -45,6 +46,7 @@ enum MoneyTab: Int, CaseIterable, Identifiable {
         switch self {
         case .home: return "house.fill"
         case .list: return "list.bullet.rectangle.fill"
+        case .assets: return "banknote.fill"
         case .stats: return "chart.bar.xaxis"
         case .settings: return "person.crop.circle.fill"
         }
@@ -109,12 +111,39 @@ struct ContentView: View {
         .sheet(item: $detail) { tx in
             DetailSheet(store: store, tx: tx) { editing = $0 }
         }
-        .task { await unlock() }
-        .onChange(of: scenePhase) { _, phase in
-            guard store.privacyLock else { return }
-            if phase == .background { locked = true }
-            if phase == .active && locked { Task { await unlock() } }
+        .preferredColorScheme(colorScheme)
+        .task { await bootstrap() }
+        .onOpenURL { url in
+            if url.scheme == "moneymate" { showAdd = true }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .moneyMateRemoteChanged)) { _ in
+            push("iCloud 上有新账本，可在「我的」里恢复")
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await bootstrap() }
+                if locked { Task { await unlock() } }
+            }
+            if phase == .background && store.privacyLock { locked = true }
+        }
+    }
+
+    /// 深色 / 浅色 / 跟随系统
+    private var colorScheme: ColorScheme? {
+        switch store.appearance {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    /// 启动与回前台：解锁、合并快捷指令记账、重建本地提醒
+    @MainActor
+    private func bootstrap() async {
+        await unlock()
+        let merged = store.consumePendingQuickItems()
+        if merged > 0 { push("已从快捷指令记下 \(merged) 笔") }
+        NotificationService.shared.reschedule(store: store)
     }
 
     @MainActor
@@ -156,6 +185,8 @@ struct ContentView: View {
             HomePage(store: store, namespace: glassNS, actions: homeActions)
         case .list:
             TransactionsPage(store: store, namespace: glassNS, onOpen: { detail = $0 })
+        case .assets:
+            NetWorthPage(store: store)
         case .stats:
             StatsPage(store: store, namespace: glassNS)
         case .settings:

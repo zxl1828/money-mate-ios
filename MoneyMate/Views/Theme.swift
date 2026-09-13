@@ -1,21 +1,35 @@
 import SwiftUI
+import UIKit
 
 // MARK: - 紫色主题色板（全局统一）
 
 enum Palette {
-    static let primary = Color(red: 0.58, green: 0.47, blue: 0.99)
-    static let primaryDeep = Color(red: 0.45, green: 0.34, blue: 0.88)
-    static let primarySoft = Color(red: 0.74, green: 0.66, blue: 1.00)
-    static let lilac = Color(red: 0.90, green: 0.87, blue: 1.00)
-    static let lavender = Color(red: 0.97, green: 0.96, blue: 1.00)
-    static let mint = Color(red: 0.42, green: 0.89, blue: 0.79)
-    static let rose = Color(red: 1.00, green: 0.55, blue: 0.74)
-    static let ink = Color(red: 0.24, green: 0.20, blue: 0.40)
-    static let glassTint = Color.white.opacity(0.30)
+    /// 深浅色自适应颜色：浅色分支与原有配色完全一致，只额外提供深色变体
+    static func adaptive(light: (Double, Double, Double),
+                         dark: (Double, Double, Double),
+                         alpha: (Double, Double) = (1, 1)) -> Color {
+        Color(uiColor: UIColor { trait in
+            let isDark = trait.userInterfaceStyle == .dark
+            let rgb = isDark ? dark : light
+            return UIColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: isDark ? alpha.1 : alpha.0)
+        })
+    }
+
+    static let primary = adaptive(light: (0.58, 0.47, 0.99), dark: (0.70, 0.62, 1.00))
+    static let primaryDeep = adaptive(light: (0.45, 0.34, 0.88), dark: (0.58, 0.48, 1.00))
+    static let primarySoft = adaptive(light: (0.74, 0.66, 1.00), dark: (0.60, 0.53, 0.96))
+    static let lilac = adaptive(light: (0.90, 0.87, 1.00), dark: (0.22, 0.19, 0.34))
+    static let lavender = adaptive(light: (0.97, 0.96, 1.00), dark: (0.10, 0.08, 0.16))
+    static let mint = adaptive(light: (0.42, 0.89, 0.79), dark: (0.38, 0.84, 0.74))
+    static let rose = adaptive(light: (1.00, 0.55, 0.74), dark: (1.00, 0.60, 0.78))
+    static let ink = adaptive(light: (0.24, 0.20, 0.40), dark: (0.95, 0.94, 0.99))
+    static let glassTint = adaptive(light: (1, 1, 1), dark: (1, 1, 1), alpha: (0.30, 0.12))
+    /// 背景光斑用的浅色块（深色下改为偏紫的暗光）
+    static let blobLight = adaptive(light: (1, 1, 1), dark: (0.34, 0.29, 0.55))
 
     static let hero = LinearGradient(colors: [primarySoft, primary, primaryDeep],
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
-    static let heroSoft = LinearGradient(colors: [Color.white.opacity(0.95), lilac],
+    static let heroSoft = LinearGradient(colors: [blobLight.opacity(0.95), lilac],
                                          startPoint: .topLeading, endPoint: .bottomTrailing)
     static let income = LinearGradient(colors: [mint, Color(red: 0.32, green: 0.72, blue: 0.98)],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)

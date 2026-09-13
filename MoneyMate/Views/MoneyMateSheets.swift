@@ -31,6 +31,8 @@ struct AddSheet: View {
     @State private var date = Date()
     @State private var recurrence: Recurrence = .none
     @State private var errorText: String?
+    @State private var accountID: UUID?
+    @State private var attachments: [TxAttachment] = []
 
     init(store: MoneyStore, editing: Tx? = nil) {
         self.store = store
@@ -48,6 +50,10 @@ struct AddSheet: View {
         _tags = State(initialValue: editing?.tags ?? [])
         _date = State(initialValue: editing?.date ?? Date())
         _recurrence = State(initialValue: editing?.recurrence ?? .none)
+        _accountID = State(initialValue: editing?.accountID
+            ?? store.activeAccounts.first(where: { $0.kind == .wallet })?.id
+            ?? store.activeAccounts.first?.id)
+        _attachments = State(initialValue: editing?.attachments ?? [])
     }
 
     private let columns = [GridItem(.adaptive(minimum: 68), spacing: 10)]
@@ -58,9 +64,11 @@ struct AddSheet: View {
                 VStack(spacing: 16) {
                     typeSegmented
                     amountCard
+                    accountCard
                     categoryGrid
                     currencyCard
                     detailCard
+                    receiptCard
                     locationCard
                     tagCard
                     scheduleCard
@@ -103,6 +111,10 @@ struct AddSheet: View {
             guard let coordinate = locator.coordinate, !newValue.isEmpty else { return }
             guard waitingForLocation || !locationTouched else { return }
             applyLocation(newValue, coordinate)
+        }
+        .onChange(of: isIncome) { _, newValue in
+            let list = (newValue ? store.incomeCategories : store.expenseCategories).map(\.name)
+            if !list.contains(category), let first = list.first { category = first }
         }
     }
 
@@ -155,13 +167,12 @@ struct AddSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("分类").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
             LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(Tx.categories, id: \.self) { name in
+                ForEach(sourceCategories, id: \.self) { name in
                     Button {
                         category = name
-                        if name == "工资" { isIncome = true }
                     } label: {
                         VStack(spacing: 6) {
-                            Image(systemName: Tx.symbol(for: name))
+                            Image(systemName: store.categoryIcon(name))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(category == name ? .white : Palette.primary)
                                 .frame(width: 34, height: 34)
@@ -184,6 +195,68 @@ struct AddSheet: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 账户选择（信用卡会显示欠款）
+    private var accountCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("账户").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+            if store.activeAccounts.isEmpty {
+                Text("还没有账户，去「资产」页新建一个")
+                    .font(.caption2)
+                    .foregroundStyle(Palette.ink.opacity(0.55))
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(store.activeAccounts) { account in
+                            Button {
+                                accountID = account.id
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: account.icon)
+                                        .font(.system(size: 12, weight: .semibold))
+                                    Text(account.name)
+                                        .font(.system(size: 12, design: .rounded).weight(.semibold))
+                                    Text(store.money(store.balance(of: account.id)))
+                                        .font(.system(size: 11, design: .rounded))
+                                        .opacity(0.7)
+                                }
+                                .foregroundStyle(accountID == account.id ? .white : Palette.ink.opacity(0.8))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(accountID == account.id
+                                            ? AnyShapeStyle(Palette.hero)
+                                            : AnyShapeStyle(Palette.primary.opacity(0.10)),
+                                            in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 收据 / 发票附件
+    private var receiptCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("收据 / 发票").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+            AttachmentEditor(attachments: $attachments)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    /// 当前收支类型下可选的分类
+    private var sourceCategories: [String] {
+        let list = isIncome ? store.incomeCategories : store.expenseCategories
+        let names = list.map(\.name)
+        return names.isEmpty ? (isIncome ? ["工资"] : ["其他"]) : names
     }
 
     private var currencyCard: some View {
@@ -526,7 +599,13 @@ struct AddSheet: View {
                     longitude: longitude,
                     recurrence: recurrence,
                     sourceID: editing?.sourceID,
-                    autoPosted: false)
+                    autoPosted: false,
+                    kind: isIncome ? .income : .expense,
+                    accountID: accountID,
+                    toAccountID: nil,
+                    attachments: attachments,
+                    updatedAt: Date(),
+                    memberName: store.myName)
         if editing != nil {
             store.update(tx)
         } else {
@@ -1068,6 +1147,7 @@ struct DetailSheet: View {
                 VStack(spacing: 16) {
                     headCard
                     infoCard
+                    receiptCard
                     mapCard
                     actionRow
                 }
@@ -1113,6 +1193,27 @@ struct DetailSheet: View {
         .glassPanel(Radius.card, strong: true)
     }
 
+    /// 所属账户 / 转账双方
+    private var accountLine: String {
+        if tx.kind == .transfer {
+            return store.accountName(tx.accountID) + " \u{2192} " + store.accountName(tx.toAccountID)
+        }
+        return store.accountName(tx.accountID)
+    }
+
+    @ViewBuilder
+    private var receiptCard: some View {
+        if !tx.attachments.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("收据 / 发票").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                AttachmentGallery(attachments: tx.attachments)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassPanel(Radius.card, strong: true)
+        }
+    }
+
     @ViewBuilder
     private var mapCard: some View {
         if let coordinate = tx.coordinate {
@@ -1150,6 +1251,8 @@ struct DetailSheet: View {
     private var infoCard: some View {
         VStack(spacing: 0) {
             row(label: "分类", value: tx.category)
+            divider
+            row(label: "账户", value: accountLine)
             divider
             row(label: "时间", value: tx.date.formatted(date: .abbreviated, time: .shortened))
             if !tx.merchant.isEmpty {

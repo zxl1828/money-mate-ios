@@ -102,6 +102,12 @@ struct Tx: Identifiable, Codable, Hashable {
     var recurrence: Recurrence
     var sourceID: UUID?         // 周期账单母单
     var autoPosted: Bool        // 是否为自动补录
+    var kind: TxKind            // 支出 / 收入 / 转账
+    var accountID: UUID?        // 所属账户（转账为转出账户）
+    var toAccountID: UUID?      // 转账转入账户
+    var attachments: [TxAttachment]  // 收据 / 发票
+    var updatedAt: Date         // 最后修改时间（同步用）
+    var memberName: String      // 共享账本记账人
 
     init(id: UUID = UUID(),
          title: String,
@@ -118,7 +124,13 @@ struct Tx: Identifiable, Codable, Hashable {
          longitude: Double? = nil,
          recurrence: Recurrence = .none,
          sourceID: UUID? = nil,
-         autoPosted: Bool = false) {
+         autoPosted: Bool = false,
+         kind: TxKind = .expense,
+         accountID: UUID? = nil,
+         toAccountID: UUID? = nil,
+         attachments: [TxAttachment] = [],
+         updatedAt: Date = Date(),
+         memberName: String = "") {
         self.id = id
         self.title = title
         self.amount = amount
@@ -135,11 +147,18 @@ struct Tx: Identifiable, Codable, Hashable {
         self.recurrence = recurrence
         self.sourceID = sourceID
         self.autoPosted = autoPosted
+        self.kind = kind
+        self.accountID = accountID
+        self.toAccountID = toAccountID
+        self.attachments = attachments
+        self.updatedAt = updatedAt
+        self.memberName = memberName
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, rate, category, date
         case merchant, note, tags, location, latitude, longitude, recurrence, sourceID, autoPosted
+        case kind, accountID, toAccountID, attachments, updatedAt, memberName
     }
 
     // 兼容旧版本存档：缺失字段一律回落默认值
@@ -162,9 +181,17 @@ struct Tx: Identifiable, Codable, Hashable {
         recurrence = try c.decodeIfPresent(Recurrence.self, forKey: .recurrence) ?? .none
         sourceID = try c.decodeIfPresent(UUID.self, forKey: .sourceID)
         autoPosted = try c.decodeIfPresent(Bool.self, forKey: .autoPosted) ?? false
+        kind = try c.decodeIfPresent(TxKind.self, forKey: .kind) ?? (amount >= 0 ? .income : .expense)
+        accountID = try c.decodeIfPresent(UUID.self, forKey: .accountID)
+        toAccountID = try c.decodeIfPresent(UUID.self, forKey: .toAccountID)
+        attachments = try c.decodeIfPresent([TxAttachment].self, forKey: .attachments) ?? []
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? date
+        memberName = try c.decodeIfPresent(String.self, forKey: .memberName) ?? ""
     }
 
-    var isIncome: Bool { amount >= 0 }
+    var isTransfer: Bool { kind == .transfer }
+    var isIncome: Bool { kind != .transfer && amount >= 0 }
+    var isExpense: Bool { kind != .transfer && amount < 0 }
     var amountCNY: Double { amount * rate }
     var symbol: String { Tx.symbol(for: category) }
 
@@ -253,10 +280,23 @@ private struct StoreSnapshot: Codable {
     var budgetByCategory: [String: Double] = [:]
     var recurringEnabled: Bool = true
     var seeded: Bool = false
+    var accounts: [Account] = []
+    var categories: [TxCategory] = []
+    var appearance: AppearanceMode = .system
+    var dailyReminder: Bool = false
+    var dailyReminderHour: Int = 21
+    var dailyReminderMinute: Int = 0
+    var budgetAlert: Bool = true
+    var creditAlert: Bool = true
+    var ledgerName: String = "我的账本"
+    var myName: String = "我"
+    var members: [LedgerMember] = []
 
     enum CodingKeys: String, CodingKey {
         case txs, budget, notifyEnabled, privacyLock, hapticsEnabled, cloudSync
         case baseCurrency, budgetByCategory, recurringEnabled, seeded
+        case accounts, categories, appearance, dailyReminder, dailyReminderHour, dailyReminderMinute
+        case budgetAlert, creditAlert, ledgerName, myName, members
     }
 
     init(txs: [Tx] = [],
@@ -268,7 +308,18 @@ private struct StoreSnapshot: Codable {
          baseCurrency: Currency = .cny,
          budgetByCategory: [String: Double] = [:],
          recurringEnabled: Bool = true,
-         seeded: Bool = false) {
+         seeded: Bool = false,
+         accounts: [Account] = [],
+         categories: [TxCategory] = [],
+         appearance: AppearanceMode = .system,
+         dailyReminder: Bool = false,
+         dailyReminderHour: Int = 21,
+         dailyReminderMinute: Int = 0,
+         budgetAlert: Bool = true,
+         creditAlert: Bool = true,
+         ledgerName: String = "我的账本",
+         myName: String = "我",
+         members: [LedgerMember] = []) {
         self.txs = txs
         self.budget = budget
         self.notifyEnabled = notifyEnabled
@@ -279,6 +330,17 @@ private struct StoreSnapshot: Codable {
         self.budgetByCategory = budgetByCategory
         self.recurringEnabled = recurringEnabled
         self.seeded = seeded
+        self.accounts = accounts
+        self.categories = categories
+        self.appearance = appearance
+        self.dailyReminder = dailyReminder
+        self.dailyReminderHour = dailyReminderHour
+        self.dailyReminderMinute = dailyReminderMinute
+        self.budgetAlert = budgetAlert
+        self.creditAlert = creditAlert
+        self.ledgerName = ledgerName
+        self.myName = myName
+        self.members = members
     }
 
     init(from decoder: Decoder) throws {
@@ -293,6 +355,17 @@ private struct StoreSnapshot: Codable {
         budgetByCategory = try c.decodeIfPresent([String: Double].self, forKey: .budgetByCategory) ?? [:]
         recurringEnabled = try c.decodeIfPresent(Bool.self, forKey: .recurringEnabled) ?? true
         seeded = try c.decodeIfPresent(Bool.self, forKey: .seeded) ?? false
+        accounts = try c.decodeIfPresent([Account].self, forKey: .accounts) ?? []
+        categories = try c.decodeIfPresent([TxCategory].self, forKey: .categories) ?? []
+        appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
+        dailyReminder = try c.decodeIfPresent(Bool.self, forKey: .dailyReminder) ?? false
+        dailyReminderHour = try c.decodeIfPresent(Int.self, forKey: .dailyReminderHour) ?? 21
+        dailyReminderMinute = try c.decodeIfPresent(Int.self, forKey: .dailyReminderMinute) ?? 0
+        budgetAlert = try c.decodeIfPresent(Bool.self, forKey: .budgetAlert) ?? true
+        creditAlert = try c.decodeIfPresent(Bool.self, forKey: .creditAlert) ?? true
+        ledgerName = try c.decodeIfPresent(String.self, forKey: .ledgerName) ?? "我的账本"
+        myName = try c.decodeIfPresent(String.self, forKey: .myName) ?? "我"
+        members = try c.decodeIfPresent([LedgerMember].self, forKey: .members) ?? []
     }
 }
 
@@ -308,6 +381,17 @@ final class MoneyStore: ObservableObject {
     @Published var baseCurrency: Currency { didSet { persist() } }
     @Published var budgetByCategory: [String: Double] { didSet { persist() } }
     @Published var recurringEnabled: Bool { didSet { persist() } }
+    @Published var accounts: [Account] { didSet { persist() } }
+    @Published var categories: [TxCategory] { didSet { persist() } }
+    @Published var appearance: AppearanceMode { didSet { persist() } }
+    @Published var dailyReminder: Bool { didSet { persist() } }
+    @Published var dailyReminderHour: Int { didSet { persist() } }
+    @Published var dailyReminderMinute: Int { didSet { persist() } }
+    @Published var budgetAlert: Bool { didSet { persist() } }
+    @Published var creditAlert: Bool { didSet { persist() } }
+    @Published var ledgerName: String { didSet { persist() } }
+    @Published var myName: String { didSet { persist() } }
+    @Published var members: [LedgerMember] { didSet { persist() } }
 
     private static let key = "moneymate.store.v1"
     private var isLoading = false
@@ -323,13 +407,26 @@ final class MoneyStore: ObservableObject {
         baseCurrency = snap.baseCurrency
         budgetByCategory = snap.budgetByCategory
         recurringEnabled = snap.recurringEnabled
+        accounts = snap.accounts
+        categories = snap.categories
+        appearance = snap.appearance
+        dailyReminder = snap.dailyReminder
+        dailyReminderHour = snap.dailyReminderHour
+        dailyReminderMinute = snap.dailyReminderMinute
+        budgetAlert = snap.budgetAlert
+        creditAlert = snap.creditAlert
+        ledgerName = snap.ledgerName
+        myName = snap.myName
+        members = snap.members
         isLoading = true
         if !snap.seeded {
             txs = MoneyStore.sampleData()
             isLoading = false
+            migrateIfNeeded()
             persist()
         } else {
             isLoading = false
+            migrateIfNeeded()
             processRecurring()
         }
     }
@@ -357,7 +454,7 @@ final class MoneyStore: ObservableObject {
         txs = MoneyStore.sampleData()
     }
 
-    private func persist() {
+    func persist() {
         guard !isLoading else { return }
         let snap = StoreSnapshot(txs: txs,
                                  budget: budget,
@@ -368,9 +465,24 @@ final class MoneyStore: ObservableObject {
                                  baseCurrency: baseCurrency,
                                  budgetByCategory: budgetByCategory,
                                  recurringEnabled: recurringEnabled,
-                                 seeded: true)
+                                 seeded: true,
+                                 accounts: accounts,
+                                 categories: categories,
+                                 appearance: appearance,
+                                 dailyReminder: dailyReminder,
+                                 dailyReminderHour: dailyReminderHour,
+                                 dailyReminderMinute: dailyReminderMinute,
+                                 budgetAlert: budgetAlert,
+                                 creditAlert: creditAlert,
+                                 ledgerName: ledgerName,
+                                 myName: myName,
+                                 members: members)
         guard let data = try? JSONEncoder().encode(snap) else { return }
         UserDefaults.standard.set(data, forKey: MoneyStore.key)
+        WidgetBridge.write(store: self)
+        if cloudSync {
+            Task { @MainActor in CloudSyncService.shared.push(data: data) }
+        }
     }
 
     private static func load() -> StoreSnapshot {
@@ -393,7 +505,18 @@ final class MoneyStore: ObservableObject {
                                  baseCurrency: baseCurrency,
                                  budgetByCategory: budgetByCategory,
                                  recurringEnabled: recurringEnabled,
-                                 seeded: true)
+                                 seeded: true,
+                                 accounts: accounts,
+                                 categories: categories,
+                                 appearance: appearance,
+                                 dailyReminder: dailyReminder,
+                                 dailyReminderHour: dailyReminderHour,
+                                 dailyReminderMinute: dailyReminderMinute,
+                                 budgetAlert: budgetAlert,
+                                 creditAlert: creditAlert,
+                                 ledgerName: ledgerName,
+                                 myName: myName,
+                                 members: members)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try? encoder.encode(snap)
@@ -412,6 +535,17 @@ final class MoneyStore: ObservableObject {
         baseCurrency = snap.baseCurrency
         budgetByCategory = snap.budgetByCategory
         recurringEnabled = snap.recurringEnabled
+        accounts = snap.accounts
+        categories = snap.categories
+        appearance = snap.appearance
+        dailyReminder = snap.dailyReminder
+        dailyReminderHour = snap.dailyReminderHour
+        dailyReminderMinute = snap.dailyReminderMinute
+        budgetAlert = snap.budgetAlert
+        creditAlert = snap.creditAlert
+        ledgerName = snap.ledgerName
+        myName = snap.myName
+        members = snap.members
         isLoading = false
         persist()
         return true
@@ -480,7 +614,7 @@ final class MoneyStore: ObservableObject {
     // MARK: 汇总
 
     var income: Double { monthTxs.filter { $0.isIncome }.reduce(0) { $0 + $1.amountCNY } }
-    var expense: Double { monthTxs.filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY } }
+    var expense: Double { monthTxs.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY } }
     var balance: Double { income - expense }
 
     var budgetLeft: Double { max(budget - expense, 0) }
@@ -494,7 +628,7 @@ final class MoneyStore: ObservableObject {
     }
 
     var biggestExpense: Tx? {
-        monthTxs.filter { !$0.isIncome }.min { $0.amountCNY < $1.amountCNY }
+        monthTxs.filter { $0.isExpense }.min { $0.amountCNY < $1.amountCNY }
     }
 
     var activeDays: Int {
@@ -509,7 +643,7 @@ final class MoneyStore: ObservableObject {
         guard let lastMonth = cal.date(byAdding: .month, value: -1, to: Date()) else { return nil }
         let day = cal.component(.day, from: Date())
         let prev = txs.filter { tx in
-            guard !tx.isIncome, cal.isDate(tx.date, equalTo: lastMonth, toGranularity: .month) else { return false }
+            guard tx.isExpense, cal.isDate(tx.date, equalTo: lastMonth, toGranularity: .month) else { return false }
             return cal.component(.day, from: tx.date) <= day
         }.reduce(0) { $0 - $1.amountCNY }
         guard prev > 0 else { return nil }
@@ -518,7 +652,7 @@ final class MoneyStore: ObservableObject {
 
     /// 智能预算建议：近 30 日日均支出 推算整月，再留 8% 余量
     func budgetSuggestion() -> Double {
-        let recent = txs(in: 30).filter { !$0.isIncome }
+        let recent = txs(in: 30).filter { $0.isExpense }
         guard !recent.isEmpty else { return budget }
         let calendar = Calendar.current
         let earliest = recent.map(\.date).min() ?? Date()
@@ -534,7 +668,7 @@ final class MoneyStore: ObservableObject {
     }
 
     func categorySpent(_ category: String) -> Double {
-        monthTxs.filter { !$0.isIncome && $0.category == category }.reduce(0) { $0 - $1.amountCNY }
+        monthTxs.filter { $0.isExpense && $0.category == category }.reduce(0) { $0 - $1.amountCNY }
     }
 
     /// 预算吃紧的排行（已用 / 预算）
@@ -557,7 +691,7 @@ final class MoneyStore: ObservableObject {
         var points: [DayPoint] = []
         for offset in stride(from: days - 1, through: 0, by: -1) {
             guard let day = cal.date(byAdding: .day, value: -offset, to: Date()) else { continue }
-            let total = txs.filter { !$0.isIncome && cal.isDate($0.date, inSameDayAs: day) }
+            let total = txs.filter { $0.isExpense && cal.isDate($0.date, inSameDayAs: day) }
                 .reduce(0) { $0 - $1.amountCNY }
             points.append(DayPoint(date: cal.startOfDay(for: day), label: formatter.string(from: day), value: total))
         }
@@ -569,7 +703,7 @@ final class MoneyStore: ObservableObject {
     func categoryTotals(days: Int = 0) -> [CategoryTotal] {
         let source = days > 0 ? txs(in: days) : monthTxs
         var bucket: [String: Double] = [:]
-        for tx in source where !tx.isIncome {
+        for tx in source where tx.isExpense {
             bucket[tx.category, default: 0] += -tx.amountCNY
         }
         return bucket.map { CategoryTotal(label: $0.key, value: $0.value) }
@@ -585,7 +719,7 @@ final class MoneyStore: ObservableObject {
             guard let month = cal.date(byAdding: .month, value: -offset, to: Date()) else { continue }
             let list = txs.filter { cal.isDate($0.date, equalTo: month, toGranularity: .month) }
             let inc = list.filter { $0.isIncome }.reduce(0) { $0 + $1.amountCNY }
-            let exp = list.filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY }
+            let exp = list.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
             points.append(MonthPoint(label: formatter.string(from: month), income: inc, expense: exp))
         }
         return points
@@ -596,7 +730,7 @@ final class MoneyStore: ObservableObject {
         let groups = Dictionary(grouping: list) { cal.startOfDay(for: $0.date) }
         return groups.map { day, items in
             let sorted = items.sorted { $0.date > $1.date }
-            let exp = sorted.filter { !$0.isIncome }.reduce(0) { $0 - $1.amountCNY }
+            let exp = sorted.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
             let inc = sorted.filter { $0.isIncome }.reduce(0) { $0 + $1.amountCNY }
             return DayGroup(day: day, txs: sorted, expense: exp, income: inc)
         }
