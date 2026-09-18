@@ -199,9 +199,13 @@ struct ContentView: View {
         locked = true
         let ok = await Biometrics.authenticate()
         if ok {
+            Haptics.success()
             withAnimation(.easeInOut(duration: 0.25)) { locked = false }
         }
-        if !ok { push("已取消解锁") }
+        if !ok {
+            Haptics.error()
+            push("已取消解锁")
+        }
     }
 
     // MARK: 页面
@@ -221,6 +225,7 @@ struct ContentView: View {
 
     private func select(_ item: MoneyTab) {
         guard item != tab else { return }
+        Haptics.tap()
         forward = item.rawValue > tab.rawValue
         withAnimation(.spring(response: 0.22, dampingFraction: 0.93)) { tab = item }
     }

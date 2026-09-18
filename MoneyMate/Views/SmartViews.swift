@@ -117,6 +117,7 @@ struct TemplateStrip: View {
                     memberName: store.myName)
         if tx.accountID == nil { tx.accountID = store.activeAccounts.first?.id }
         store.add(tx)
+        Haptics.success()
         toast("已记一笔：" + item.label)
     }
 }

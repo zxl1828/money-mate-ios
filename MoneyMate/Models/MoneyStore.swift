@@ -376,7 +376,12 @@ final class MoneyStore: ObservableObject {
     @Published var budget: Double { didSet { persist() } }
     @Published var notifyEnabled: Bool { didSet { persist() } }
     @Published var privacyLock: Bool { didSet { persist() } }
-    @Published var hapticsEnabled: Bool { didSet { persist() } }
+    @Published var hapticsEnabled: Bool {
+        didSet {
+            persist()
+            Haptics.enabled = hapticsEnabled
+        }
+    }
     @Published var cloudSync: Bool { didSet { persist() } }
     @Published var baseCurrency: Currency { didSet { persist() } }
     @Published var budgetByCategory: [String: Double] { didSet { persist() } }
@@ -405,6 +410,7 @@ final class MoneyStore: ObservableObject {
         notifyEnabled = snap.notifyEnabled
         privacyLock = snap.privacyLock
         hapticsEnabled = snap.hapticsEnabled
+        Haptics.enabled = snap.hapticsEnabled
         cloudSync = snap.cloudSync
         baseCurrency = snap.baseCurrency
         budgetByCategory = snap.budgetByCategory

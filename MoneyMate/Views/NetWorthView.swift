@@ -692,6 +692,7 @@ struct TransferSheet: View {
         }
         store.addTransfer(from: fromID, to: toID, amount: amount, date: date,
                           note: note, member: store.myName)
+        Haptics.success()
         dismiss()
     }
 }

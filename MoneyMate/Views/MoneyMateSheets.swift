@@ -182,6 +182,7 @@ struct AddSheet: View {
                     Button {
                         category = name
                         categoryTouched = true
+                        Haptics.select()
                     } label: {
                         VStack(spacing: 6) {
                             Image(systemName: store.categoryIcon(name))
@@ -592,6 +593,7 @@ struct AddSheet: View {
         let value = Double(amountText.trimmingCharacters(in: .whitespaces)) ?? 0
         guard value > 0 else {
             errorText = "请输入大于 0 的金额"
+            Haptics.error()
             return
         }
         let signed = isIncome ? value : -value
@@ -629,6 +631,7 @@ struct AddSheet: View {
         if !merchantKey.isEmpty {
             SmartMemory.remember(merchant: merchantKey, category: category)
         }
+        Haptics.success()
         dismiss()
     }
 }
@@ -1342,6 +1345,7 @@ struct DetailSheet: View {
 
             Button(role: .destructive) {
                 store.deleteWithUndo(tx)
+                Haptics.warning()
                 dismiss()
             } label: {
                 Label("删除这笔", systemImage: "trash")
