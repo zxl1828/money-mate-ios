@@ -368,6 +368,7 @@ struct StatsPage: View {
                 monthsCard
                 metricsGrid
                 insightsCard
+                InsightPanel(store: store)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
