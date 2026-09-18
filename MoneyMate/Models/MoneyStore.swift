@@ -108,6 +108,7 @@ struct Tx: Identifiable, Codable, Hashable {
     var attachments: [TxAttachment]  // 收据 / 发票
     var updatedAt: Date         // 最后修改时间（同步用）
     var memberName: String      // 共享账本记账人
+    var reimbursable: Bool      // 待报销
 
     init(id: UUID = UUID(),
          title: String,
@@ -130,7 +131,8 @@ struct Tx: Identifiable, Codable, Hashable {
          toAccountID: UUID? = nil,
          attachments: [TxAttachment] = [],
          updatedAt: Date = Date(),
-         memberName: String = "") {
+         memberName: String = "",
+         reimbursable: Bool = false) {
         self.id = id
         self.title = title
         self.amount = amount
@@ -153,12 +155,14 @@ struct Tx: Identifiable, Codable, Hashable {
         self.attachments = attachments
         self.updatedAt = updatedAt
         self.memberName = memberName
+        self.reimbursable = reimbursable
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, rate, category, date
         case merchant, note, tags, location, latitude, longitude, recurrence, sourceID, autoPosted
         case kind, accountID, toAccountID, attachments, updatedAt, memberName
+        case reimbursable
     }
 
     // 兼容旧版本存档：缺失字段一律回落默认值
@@ -187,6 +191,7 @@ struct Tx: Identifiable, Codable, Hashable {
         attachments = try c.decodeIfPresent([TxAttachment].self, forKey: .attachments) ?? []
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? date
         memberName = try c.decodeIfPresent(String.self, forKey: .memberName) ?? ""
+        reimbursable = try c.decodeIfPresent(Bool.self, forKey: .reimbursable) ?? false
     }
 
     var isTransfer: Bool { kind == .transfer }

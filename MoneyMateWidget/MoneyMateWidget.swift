@@ -34,7 +34,13 @@ struct MoneyMateWidgetView: View {
     var body: some View {
         Group {
             if let snap = entry.snapshot {
-                content(snap)
+                if family == .accessoryCircular || family == .accessoryRectangular || family == .accessoryInline {
+                    accessory(snap)
+                } else {
+                    content(snap)
+                }
+            } else if family == .accessoryInline {
+                Text("MoneyMate")
             } else {
                 emptyState
             }
@@ -45,6 +51,42 @@ struct MoneyMateWidgetView: View {
                            startPoint: .topLeading, endPoint: .bottomTrailing)
         }
         .widgetURL(URL(string: WidgetShared.deepLink))
+    }
+
+    /// 锁屏小组件（圆形 / 矩形 / 单行）
+    @ViewBuilder
+    private func accessory(_ snap: WidgetShared.Snapshot) -> some View {
+        switch family {
+        case .accessoryCircular:
+            VStack(spacing: 2) {
+                Text(snap.monthBudget > 0 ? short(snap.budgetLeft) : short(snap.monthExpense))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text(snap.monthBudget > 0 ? "剩余" : "本月")
+                    .font(.system(size: 9, design: .rounded))
+            }
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                Text("本月支出 " + short(snap.monthExpense))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                if snap.monthBudget > 0 {
+                    Text("预算剩 " + short(snap.budgetLeft))
+                        .font(.system(size: 11, design: .rounded))
+                }
+                Text("今日 " + short(snap.todayExpense))
+                    .font(.system(size: 11, design: .rounded))
+            }
+        default:
+            Text("本月剩 " + short(snap.monthBudget > 0 ? snap.budgetLeft : snap.monthExpense))
+        }
+    }
+
+    private func short(_ value: Double) -> String {
+        if value >= 10000 {
+            return "\u{00A5}" + String(format: "%.1f万", value / 10000)
+        }
+        return "\u{00A5}" + String(format: "%.0f", value)
     }
 
     private func content(_ snap: WidgetShared.Snapshot) -> some View {
@@ -146,7 +188,8 @@ struct MoneyMateWidget: Widget {
         }
         .configurationDisplayName("MoneyMate 账本")
         .description("本月支出、预算剩余与净资产，一眼看清")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium,
+                            .accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 

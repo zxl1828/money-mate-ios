@@ -619,7 +619,8 @@ struct AddSheet: View {
                     toAccountID: nil,
                     attachments: attachments,
                     updatedAt: Date(),
-                    memberName: store.myName)
+                    memberName: store.myName,
+                    reimbursable: editing?.reimbursable ?? false)
         if editing != nil {
             store.update(tx)
         } else {
@@ -1157,6 +1158,7 @@ struct DetailSheet: View {
     @ObservedObject var store: MoneyStore
     let tx: Tx
     var onEdit: (Tx) -> Void = { _ in }
+    var onToast: (String) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -1371,6 +1373,22 @@ struct DetailSheet: View {
             }
             .buttonStyle(.plain)
             .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+
+            Button {
+                var target = tx
+                target.reimbursable.toggle()
+                store.update(target)
+                Haptics.select()
+                if target.reimbursable { onToast("已标记待报销") } else { onToast("已取消待报销") }
+            } label: {
+                Label(tx.reimbursable ? "取消待报销标记" : "标记为待报销", systemImage: "doc.text.magnifyingglass")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(tx.reimbursable ? Palette.rose : Palette.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+            .liquidGlass(.clear, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         }
     }
 }

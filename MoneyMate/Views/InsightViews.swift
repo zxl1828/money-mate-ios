@@ -7,11 +7,20 @@ struct InsightPanel: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            habitCard
             statementNotice
+            reimbursementCard
+            creditToolsCard
+            goalCard
             insightCards
             heatmapCard
         }
     }
+
+    private var habitCard: some View { HabitCard(store: store) }
+    private var reimbursementCard: some View { ReimbursementCard(store: store) }
+    private var creditToolsCard: some View { CreditToolsCard(store: store) }
+    private var goalCard: some View { GoalCard(store: store) }
 
     // MARK: 账单日 / 还款日预告
 

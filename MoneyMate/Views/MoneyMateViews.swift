@@ -113,7 +113,7 @@ struct ContentView: View {
         .sheet(isPresented: $showNotify) { NotifySheet(store: store) }
         .sheet(isPresented: $showRecurring) { RecurringSheet(store: store) }
         .sheet(item: $detail) { tx in
-            DetailSheet(store: store, tx: tx) { editing = $0 }
+            DetailSheet(store: store, tx: tx, onEdit: { editing = $0 }, onToast: { push($0) })
         }
         .preferredColorScheme(colorScheme)
         .overlay(alignment: .bottom) {
