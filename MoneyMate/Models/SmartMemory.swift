@@ -48,7 +48,10 @@ enum SmartMemory {
         guard map[key] != category else { return }
         map[key] = category
         if map.count > 400 {
-            let trimmed = Dictionary(uniqueKeysWithValues: map.prefix(300))
+            var trimmed: [String: String] = [:]
+            for name in map.keys.prefix(300) {
+                trimmed[name] = map[name]
+            }
             map = trimmed
         }
         if let data = try? JSONEncoder().encode(map) {
