@@ -1,0 +1,27 @@
+MoneyMate 源码可见许可 v1.0（禁止商业使用与倒卖）
+Source-Available Non-Commercial License v1.0
+
+版权所有 (c) 2026 MoneyMate 作者。保留所有权利。
+Copyright (c) 2026 MoneyMate authors. All rights reserved.
+
+【允许 / Permitted】
+1. 个人学习、研究、自用，包括在自己设备上编译、安装、修改。
+2. 为上述非商业目的复制、修改本软件源码。
+3. 在完整保留本许可文件与版权声明的前提下，分享、转载、提交改进。
+
+【禁止 / Prohibited】
+1. 任何形式的商业使用，包括但不限于：销售、倒卖、租赁、收费分发本软件或其修改版。
+2. 以本软件或其衍生版本提供付费服务、付费下载、应用商店/应用市场分发或任何形式变现。
+3. 去除、隐藏或篡改版权声明与本许可；改名后作为自有产品发布或声称原创。
+4. 将本软件整体或实质性部分并入闭源商业产品。
+
+如需商业授权，请与作者联系取得书面许可。
+
+【其他 / Miscellaneous】
+- 本软件按"现状"提供，不附带任何明示或默示担保；使用风险由使用者自负。
+- 本许可不属于 OSI 认可的开源许可，属于"源码可见（source-available）"：源码公开可读可用，商业权利保留。
+- 违反本许可的使用行为自动终止授权。
+
+This is a source-available license, not an OSI-approved open source license.
+Commercial use, resale and paid distribution are prohibited without written
+permission from the author. Provided "as is", without warranty of any kind.
