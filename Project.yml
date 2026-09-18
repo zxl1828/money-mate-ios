@@ -25,6 +25,7 @@ targets:
           - UIInterfaceOrientationPortrait
         NSFaceIDUsageDescription: 用于解锁你的账本
         NSLocationWhenInUseUsageDescription: 用于记录每笔账发生的地点，方便日后回看
+        NSCameraUsageDescription: 用于拍摄小票并自动识别金额与商户
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLName: com.moneymate.app

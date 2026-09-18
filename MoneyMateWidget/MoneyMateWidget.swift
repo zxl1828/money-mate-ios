@@ -1,5 +1,19 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
+
+/// 小组件上的「记一笔」按钮（App Intent，无需打开 App 就能记录意图）
+struct QuickAddFromWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "记一笔"
+    static var openAppWhenRun: Bool = true
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        WidgetShared.queueQuickAdd()
+        return .result()
+    }
+}
 
 // MARK: - 时间线
 
@@ -134,6 +148,14 @@ struct MoneyMateWidgetView: View {
                     metric(title: "今日", value: money(snap.todayExpense))
                     metric(title: "净资产", value: money(snap.netWorth))
                 }
+            }
+
+            if family == .systemMedium {
+                Button(intent: QuickAddFromWidgetIntent()) {
+                    Label("记一笔", systemImage: "plus.circle.fill")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .tint(Color(red: 0.58, green: 0.47, blue: 0.99))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

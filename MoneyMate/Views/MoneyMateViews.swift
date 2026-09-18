@@ -188,6 +188,9 @@ struct ContentView: View {
     @MainActor
     private func bootstrap() async {
         await unlock()
+        if WidgetShared.consumeQuickAdd() {
+            showAdd = true
+        }
         let merged = store.consumePendingQuickItems()
         if merged > 0 { push("已从快捷指令记下 \(merged) 笔") }
         NotificationService.shared.reschedule(store: store)

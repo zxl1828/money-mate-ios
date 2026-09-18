@@ -36,6 +36,9 @@ struct AddSheet: View {
     @State private var accountID: UUID?
     @State private var attachments: [TxAttachment] = []
     @State private var categoryTouched = false
+    @State private var showCamera = false
+    @State private var showScanner = false
+    @State private var scanning = false
 
     init(store: MoneyStore, editing: Tx? = nil, prefill: Tx? = nil) {
         self.store = store
@@ -62,6 +65,25 @@ struct AddSheet: View {
     }
 
     private let columns = [GridItem(.adaptive(minimum: 68), spacing: 10)]
+
+    /// 从二维码内容里提取商户名（付款码里常带商户名/编号）
+    static func merchantName(from payload: String) -> String {
+        let trimmed = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
+        if trimmed.count <= 20 && !trimmed.contains("://") { return trimmed }
+        if let components = URLComponents(string: trimmed) {
+            for key in ["merchant", "merchantName", "m", "name", "shop"] {
+                if let value = components.queryItems?.first(where: { $0.name == key })?.value,
+                   !value.isEmpty {
+                    return value
+                }
+            }
+            if let host = components.host, !host.isEmpty, host.count <= 24 {
+                return host
+            }
+        }
+        return ""
+    }
 
     var body: some View {
         NavigationStack {
@@ -96,6 +118,35 @@ struct AddSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("取消") { dismiss() }
                 }
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraPicker { image in
+                scanning = true
+                Task {
+                    let parsed = await ReceiptScanner.scan(image)
+                    await MainActor.run {
+                        scanning = false
+                        if let parsed {
+                            amountText = String(format: "%.2f", abs(parsed.amount))
+                            if !parsed.merchant.isEmpty { merchant = parsed.merchant }
+                            else if !parsed.title.isEmpty { merchant = parsed.title }
+                            category = parsed.category
+                            categoryTouched = true
+                            isIncome = parsed.isIncome
+                            Haptics.success()
+                        } else {
+                            Haptics.error()
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showScanner) {
+            QRScannerSheet { payload in
+                let name = Self.merchantName(from: payload)
+                if !name.isEmpty { merchant = name }
+                Haptics.select()
             }
         }
         .sheet(isPresented: $showMapPicker) {
@@ -258,6 +309,30 @@ struct AddSheet: View {
     private var receiptCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("收据 / 发票").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+            HStack(spacing: 10) {
+                Button {
+                    showCamera = true
+                } label: {
+                    Label(scanning ? "识别中…" : "拍小票自动填", systemImage: "camera.fill")
+                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(.regular.tint(Palette.glassTint).interactive(), in: Capsule())
+                .disabled(scanning)
+
+                Button {
+                    showScanner = true
+                } label: {
+                    Label("扫码带商户", systemImage: "qrcode.viewfinder")
+                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(.clear.interactive(), in: Capsule())
+            }
             AttachmentEditor(attachments: $attachments)
         }
         .padding(16)

@@ -6,6 +6,7 @@ enum WidgetShared {
     static let snapshotKey = "moneymate.widget.snapshot"
     static let standardKey = "moneymate.summary.v1"
     static let deepLink = "moneymate://add"
+    static let pendingQuickAddKey = "moneymate.pending.quickadd"
 
     struct Snapshot: Codable, Hashable {
         var monthExpense: Double = 0
@@ -40,5 +41,21 @@ enum WidgetShared {
             return snap
         }
         return nil
+    }
+
+    /// 小组件上点「记一笔」：写一个时间戳，主 App 回前台时消费掉
+    static func queueQuickAdd() {
+        groupDefaults()?.set(Date().timeIntervalSince1970, forKey: pendingQuickAddKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingQuickAddKey)
+    }
+
+    /// 5 分钟内有效，消费后清除
+    static func consumeQuickAdd() -> Bool {
+        let stamp = (groupDefaults()?.object(forKey: pendingQuickAddKey) as? Double)
+            ?? (UserDefaults.standard.object(forKey: pendingQuickAddKey) as? Double)
+        guard let stamp else { return false }
+        groupDefaults()?.removeObject(forKey: pendingQuickAddKey)
+        UserDefaults.standard.removeObject(forKey: pendingQuickAddKey)
+        return Date().timeIntervalSince1970 - stamp < 300
     }
 }
