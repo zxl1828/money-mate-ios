@@ -453,15 +453,18 @@ final class MoneyStore: ObservableObject {
 
     func add(_ tx: Tx) {
         txs.insert(tx, at: 0)
+        AuditLog.append("新增", tx.title + " " + String(format: "%.2f", tx.amount))
     }
 
     func update(_ tx: Tx) {
         guard let idx = txs.firstIndex(where: { $0.id == tx.id }) else { return }
         txs[idx] = tx
+        AuditLog.append("修改", tx.title + " " + String(format: "%.2f", tx.amount))
     }
 
     func delete(_ tx: Tx) {
         txs.removeAll { $0.id == tx.id || $0.sourceID == tx.id }
+        AuditLog.append("删除", tx.title + " " + String(format: "%.2f", tx.amount))
     }
 
     /// 删除但记住，可撤销

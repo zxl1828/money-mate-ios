@@ -20,6 +20,7 @@ struct InsightPanel: View {
             DebtTrackerCard(store: store)
             TripModeCard(store: store)
             BackupCenterCard(store: store)
+            AuditLogCard()
             insightCards
             heatmapCard
         }

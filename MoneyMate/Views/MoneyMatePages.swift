@@ -191,6 +191,10 @@ struct TransactionsPage: View {
                 .buttonStyle(.plain)
             }
         }
+        .overlay(alignment: .bottom) {
+            SavedFilterBar(query: $query)
+                .offset(y: 30)
+        }
         .font(.system(.subheadline, design: .rounded))
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -329,7 +333,12 @@ struct TransactionsPage: View {
     }
 
     private var filtered: [Tx] {
-        let base = store.filter(query: query, category: category, month: selectedMonth, onlyRecurring: onlyRecurring)
+        let parsed = SearchQuery.parse(query)
+        let base = store.filter(query: parsed.keyword,
+                                category: parsed.category ?? category,
+                                month: parsed.range == nil ? selectedMonth : nil,
+                                onlyRecurring: onlyRecurring)
+            .filter { parsed.matches($0, store: store) }
         switch type {
         case .all: return base
         case .expense: return base.filter { $0.isExpense }
