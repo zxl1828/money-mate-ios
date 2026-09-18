@@ -1,3 +1,7 @@
+> [!WARNING]
+> **这是 MoneyMate 的旧版本代码（2026-09-12 之前）**，功能较少、不再维护。
+> 最新版本请切到 [`main`](https://github.com/zxl1828/money-mate-ios) 分支。
+
 # MoneyMate — iOS 26 Liquid Glass
 
 仅使用 Apple 官方 SwiftUI API，部署目标 **iOS 26.0+**，无 OCR、无第三方依赖。
