@@ -218,12 +218,19 @@ struct NetWorthPage: View {
     }
 
     private func row(_ account: Account) -> some View {
-        let balance = store.balance(of: account.id)
-        let summary = account.kind == .credit ? store.creditSummary(for: account) : nil
-        return Button {
+        Button {
             detailAccount = account
         } label: {
-            VStack(alignment: .leading, spacing: 8) {
+            rowLabel(account)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 拆成独立函数，避免类型检查器超时
+    private func rowLabel(_ account: Account) -> some View {
+        let balance = store.balance(of: account.id)
+        let summary: CreditSummary? = account.kind == .credit ? store.creditSummary(for: account) : nil
+        return VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
                     Image(systemName: account.icon)
                         .font(.system(size: 15, weight: .semibold))
@@ -268,8 +275,6 @@ struct NetWorthPage: View {
                     }
                 }
             }
-        }
-        .buttonStyle(.plain)
     }
 }
 

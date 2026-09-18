@@ -70,7 +70,7 @@ final class CloudSyncService: ObservableObject {
         update(status: .syncing)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.lastSync = Date()
-            self?.update(status: .synced(stamp))
+            self?.update(status: .synced(Date(timeIntervalSince1970: stamp)))
         }
     }
 
@@ -88,7 +88,7 @@ final class CloudSyncService: ObservableObject {
         update(status: .syncing)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             self?.lastSync = Date()
-            self?.update(status: .synced(Date().timeIntervalSince1970))
+            self?.update(status: .synced(Date()))
         }
     }
 
