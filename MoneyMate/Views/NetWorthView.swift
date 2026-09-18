@@ -226,55 +226,63 @@ struct NetWorthPage: View {
         .buttonStyle(.plain)
     }
 
-    /// 拆成独立函数，避免类型检查器超时
+    /// 拆成独立小函数，避免类型检查器超时
     private func rowLabel(_ account: Account) -> some View {
-        let balance = store.balance(of: account.id)
+        let balance: Double = store.balance(of: account.id)
         let summary: CreditSummary? = account.kind == .credit ? store.creditSummary(for: account) : nil
         return VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    Image(systemName: account.icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Palette.primary)
-                        .frame(width: 36, height: 36)
-                        .background(Palette.primary.opacity(0.12), in: Circle())
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(account.displayName)
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                        if let summary, summary.hasLimit {
-                            Text("额度 " + store.money(summary.limit))
-                                .font(.caption2)
-                                .foregroundStyle(Palette.ink.opacity(0.5))
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    Text(store.money(balance))
-                        .font(.system(.subheadline, design: .rounded).weight(.bold))
-                        .foregroundStyle(balance < 0 ? Palette.rose : Palette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Palette.ink.opacity(0.35))
-                }
-                if let summary, summary.hasLimit {
-                    VStack(alignment: .leading, spacing: 4) {
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Palette.primary.opacity(0.15))
-                                Capsule()
-                                    .fill(summary.usage > 0.9 ? AnyShapeStyle(Palette.rose) : AnyShapeStyle(Palette.hero))
-                                    .frame(width: max(geo.size.width * summary.usage, 4))
-                            }
-                        }
-                        .frame(height: 6)
-                        Text("已用 " + store.money(summary.used) + " \u{00B7} 可用 " + store.money(summary.available)
-                             + (summary.daysToDue.map { " \u{00B7} 距还款 " + String($0) + " 天" } ?? ""))
-                            .font(.caption2)
-                            .foregroundStyle(Palette.ink.opacity(0.55))
-                    }
+            topLine(account: account, balance: balance, limit: summary?.limit)
+            if let summary, summary.hasLimit {
+                creditLine(summary)
+            }
+        }
+    }
+
+    private func topLine(account: Account, balance: Double, limit: Double?) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: account.icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Palette.primary)
+                .frame(width: 36, height: 36)
+                .background(Palette.primary.opacity(0.12), in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(account.displayName)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                if let limit {
+                    Text("额度 " + store.money(limit))
+                        .font(.caption2)
+                        .foregroundStyle(Palette.ink.opacity(0.5))
                 }
             }
+            Spacer(minLength: 0)
+            Text(store.money(balance))
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+                .foregroundStyle(balance < 0 ? Palette.rose : Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Palette.ink.opacity(0.35))
+        }
+    }
+
+    private func creditLine(_ summary: CreditSummary) -> some View {
+        let usedText: String = "已用 " + store.money(summary.used) + " \u{00B7} 可用 " + store.money(summary.available)
+        let dueText: String = summary.daysToDue.map { " \u{00B7} 距还款 " + String($0) + " 天" } ?? ""
+        let ratio: Double = summary.usage
+        return VStack(alignment: .leading, spacing: 4) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.primary.opacity(0.15))
+                    Capsule().fill(Palette.hero).frame(width: max(geo.size.width * ratio, 4))
+                }
+            }
+            .frame(height: 6)
+            Text(usedText + dueText)
+                .font(.caption2)
+                .foregroundStyle(Palette.ink.opacity(0.55))
+        }
     }
 }
 
