@@ -395,6 +395,8 @@ final class MoneyStore: ObservableObject {
 
     private static let key = "moneymate.store.v1"
     private var isLoading = false
+    /// 最近一次删除的流水，用于「撤销」
+    private var lastDeleted: Tx?
 
     init() {
         let snap = MoneyStore.load()
@@ -444,6 +446,42 @@ final class MoneyStore: ObservableObject {
 
     func delete(_ tx: Tx) {
         txs.removeAll { $0.id == tx.id || $0.sourceID == tx.id }
+    }
+
+    /// 删除但记住，可撤销
+    func deleteWithUndo(_ tx: Tx) {
+        lastDeleted = tx
+        delete(tx)
+    }
+
+    @discardableResult
+    func undoDelete() -> Bool {
+        guard let tx = lastDeleted else { return false }
+        add(tx)
+        lastDeleted = nil
+        return true
+    }
+
+    var hasUndoableDelete: Bool { lastDeleted != nil }
+
+    /// 复记：用旧流水生成一条新的（不带走 id / 周期母单）
+    func duplicateAsNew(_ tx: Tx) -> Tx {
+        Tx(title: tx.title,
+           amount: tx.amount,
+           currency: tx.currency,
+           rate: tx.rate,
+           category: tx.category,
+           date: Date(),
+           merchant: tx.merchant,
+           note: tx.note,
+           tags: tx.tags,
+           location: tx.location,
+           latitude: tx.latitude,
+           longitude: tx.longitude,
+           kind: tx.kind,
+           accountID: tx.accountID,
+           updatedAt: Date(),
+           memberName: myName)
     }
 
     func clearAll() {

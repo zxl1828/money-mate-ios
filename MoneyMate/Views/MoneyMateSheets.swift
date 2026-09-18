@@ -8,6 +8,8 @@ import CoreLocation
 struct AddSheet: View {
     @ObservedObject var store: MoneyStore
     var editing: Tx? = nil
+    /// 预填（深链 / 复记 / 剪贴板嗅探），仍然是「新增」
+    var prefill: Tx? = nil
 
     @Environment(\.dismiss) private var dismiss
 
@@ -33,27 +35,30 @@ struct AddSheet: View {
     @State private var errorText: String?
     @State private var accountID: UUID?
     @State private var attachments: [TxAttachment] = []
+    @State private var categoryTouched = false
 
-    init(store: MoneyStore, editing: Tx? = nil) {
+    init(store: MoneyStore, editing: Tx? = nil, prefill: Tx? = nil) {
         self.store = store
         self.editing = editing
-        _isIncome = State(initialValue: editing?.isIncome ?? false)
-        _amountText = State(initialValue: editing.map { String(format: "%.2f", abs($0.amount)) } ?? "")
-        _category = State(initialValue: editing?.category ?? "餐饮")
-        _currency = State(initialValue: editing?.currency ?? .cny)
-        _title = State(initialValue: editing?.title ?? "")
-        _merchant = State(initialValue: editing?.merchant ?? "")
-        _note = State(initialValue: editing?.note ?? "")
-        _location = State(initialValue: editing?.location ?? "")
-        _latitude = State(initialValue: editing?.latitude)
-        _longitude = State(initialValue: editing?.longitude)
-        _tags = State(initialValue: editing?.tags ?? [])
-        _date = State(initialValue: editing?.date ?? Date())
-        _recurrence = State(initialValue: editing?.recurrence ?? .none)
-        _accountID = State(initialValue: editing?.accountID
+        self.prefill = prefill
+        let seed = editing ?? prefill
+        _isIncome = State(initialValue: seed?.isIncome ?? false)
+        _amountText = State(initialValue: seed.map { String(format: "%.2f", abs($0.amount)) } ?? "")
+        _category = State(initialValue: seed?.category ?? "餐饮")
+        _currency = State(initialValue: seed?.currency ?? .cny)
+        _title = State(initialValue: seed?.title ?? "")
+        _merchant = State(initialValue: seed?.merchant ?? "")
+        _note = State(initialValue: seed?.note ?? "")
+        _location = State(initialValue: seed?.location ?? "")
+        _latitude = State(initialValue: seed?.latitude)
+        _longitude = State(initialValue: seed?.longitude)
+        _tags = State(initialValue: seed?.tags ?? [])
+        _date = State(initialValue: seed?.date ?? Date())
+        _recurrence = State(initialValue: seed?.recurrence ?? .none)
+        _accountID = State(initialValue: seed?.accountID
             ?? store.activeAccounts.first(where: { $0.kind == .wallet })?.id
             ?? store.activeAccounts.first?.id)
-        _attachments = State(initialValue: editing?.attachments ?? [])
+        _attachments = State(initialValue: seed?.attachments ?? [])
     }
 
     private let columns = [GridItem(.adaptive(minimum: 68), spacing: 10)]
@@ -116,6 +121,12 @@ struct AddSheet: View {
             let list = (newValue ? store.incomeCategories : store.expenseCategories).map(\.name)
             if !list.contains(category), let first = list.first { category = first }
         }
+        .onChange(of: merchant) { _, newValue in
+            guard !categoryTouched else { return }
+            guard let remembered = SmartMemory.category(forMerchant: newValue) else { return }
+            let list = (isIncome ? store.incomeCategories : store.expenseCategories).map(\.name)
+            if list.contains(remembered), remembered != category { category = remembered }
+        }
     }
 
     private var typeSegmented: some View {
@@ -170,6 +181,7 @@ struct AddSheet: View {
                 ForEach(sourceCategories, id: \.self) { name in
                     Button {
                         category = name
+                        categoryTouched = true
                     } label: {
                         VStack(spacing: 6) {
                             Image(systemName: store.categoryIcon(name))
@@ -612,6 +624,11 @@ struct AddSheet: View {
             store.add(tx)
         }
         if recurrence != .none { store.processRecurring() }
+        // 学到「商户 → 分类」，下次自动填
+        let merchantKey = merchant.trimmingCharacters(in: .whitespaces)
+        if !merchantKey.isEmpty {
+            SmartMemory.remember(merchant: merchantKey, category: category)
+        }
         dismiss()
     }
 }
@@ -1324,7 +1341,7 @@ struct DetailSheet: View {
             .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
 
             Button(role: .destructive) {
-                store.delete(tx)
+                store.deleteWithUndo(tx)
                 dismiss()
             } label: {
                 Label("删除这笔", systemImage: "trash")
@@ -1335,6 +1352,21 @@ struct DetailSheet: View {
             }
             .buttonStyle(.plain)
             .liquidGlass(.clear, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+
+            Button {
+                let copy = store.duplicateAsNew(tx)
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    onEdit(copy)
+                }
+            } label: {
+                Label("再记一笔（复记）", systemImage: "arrow.clockwise")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+            .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
         }
     }
 }

@@ -84,18 +84,21 @@ struct ContentView: View {
     @State private var toast: String?
 
     @State private var locked = false
+    @State private var deepLinkPrefill: Tx?
 
     var body: some View {
-        ZStack {
-            GlassBackground()
-            pageArea
-            floatingLayer
-            toastLayer
-            if locked {
-                LockScreen {
-                    Task { await unlock() }
+        PrivacyWrapper {
+            ZStack {
+                GlassBackground()
+                pageArea
+                floatingLayer
+                toastLayer
+                if locked {
+                    LockScreen {
+                        Task { await unlock() }
+                    }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
             }
         }
         .fontDesign(.rounded)
@@ -104,6 +107,7 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: locked)
         .sheet(isPresented: $showAdd) { AddSheet(store: store) }
         .sheet(item: $editing) { tx in AddSheet(store: store, editing: tx) }
+        .sheet(item: $deepLinkPrefill) { tx in AddSheet(store: store, prefill: tx) }
         .sheet(isPresented: $showScan) { ScanSheet(store: store) }
         .sheet(isPresented: $showBudget) { BudgetSheet(store: store) }
         .sheet(isPresented: $showNotify) { NotifySheet(store: store) }
@@ -112,10 +116,26 @@ struct ContentView: View {
             DetailSheet(store: store, tx: tx) { editing = $0 }
         }
         .preferredColorScheme(colorScheme)
-        .task { await bootstrap() }
-        .onOpenURL { url in
-            if url.scheme == "moneymate" { showAdd = true }
+        .overlay(alignment: .bottom) {
+            if store.hasUndoableDelete {
+                Button {
+                    if store.undoDelete() { push("已恢复这笔记账") }
+                } label: {
+                    Label("已删除 · 点此撤销", systemImage: "arrow.uturn.backward")
+                        .font(.system(.footnote, design: .rounded).weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .glassPanel(Radius.chip, strong: true)
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 112)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.spring(response: 0.25, dampingFraction: 0.9), value: store.hasUndoableDelete)
+        .task { await bootstrap() }
+        .onOpenURL { url in handle(url) }
         .onReceive(NotificationCenter.default.publisher(for: .moneyMateRemoteChanged)) { _ in
             push("iCloud 上有新账本，可在「我的」里恢复")
         }
@@ -135,6 +155,33 @@ struct ContentView: View {
         case .light: return .light
         case .dark: return .dark
         }
+    }
+
+    /// 深链：moneymate://add?amount=32&merchant=星巴克&category=餐饮&note=xxx
+    private func handle(_ url: URL) {
+        guard url.scheme == "moneymate" else { return }
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        func value(_ key: String) -> String? {
+            items.first { $0.name == key }?.value
+        }
+        let merchantName = value("merchant") ?? ""
+        guard let amountText = value("amount"), let amount = Double(amountText), amount > 0 else {
+            showAdd = true
+            return
+        }
+        let category = value("category")
+            ?? SmartMemory.category(forMerchant: merchantName)
+            ?? "其他"
+        deepLinkPrefill = Tx(title: merchantName.isEmpty ? "快捷记账" : merchantName,
+                             amount: -abs(amount),
+                             category: category,
+                             date: Date(),
+                             merchant: merchantName,
+                             note: value("note") ?? "",
+                             kind: .expense,
+                             accountID: store.activeAccounts.first?.id,
+                             updatedAt: Date(),
+                             memberName: store.myName)
     }
 
     /// 启动与回前台：解锁、合并快捷指令记账、重建本地提醒
@@ -324,6 +371,7 @@ struct HomePage: View {
                 header
                 heroCard
                 quickActions
+                TemplateStrip(store: store)
                 trendCard
                 todayList
             }

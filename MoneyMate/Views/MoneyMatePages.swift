@@ -745,6 +745,7 @@ struct SettingsPage: View {
     @State private var showLedgerMerge = false
     @State private var shareFile: ShareFile?
     @ObservedObject private var cloud = CloudSyncService.shared
+    @ObservedObject private var privacy = PrivacyState.shared
 
     var body: some View {
         ScrollView {
@@ -898,6 +899,8 @@ struct SettingsPage: View {
     private var prefsCard: some View {
         VStack(spacing: 2) {
             appearanceRow
+            divider
+            toggleRow(title: "隐私模式（金额模糊）", icon: "eye.slash.fill", isOn: $privacy.enabled)
             divider
             toggleRow(title: "启动隐私锁（面容 / 指纹）", icon: "faceid", isOn: $store.privacyLock)
             divider
