@@ -1162,6 +1162,7 @@ struct DetailSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @State private var showSplit = false
 
     var body: some View {
         NavigationStack {
@@ -1389,6 +1390,22 @@ struct DetailSheet: View {
             }
             .buttonStyle(.plain)
             .liquidGlass(.clear, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+
+            if tx.isExpense {
+                Button {
+                    showSplit = true
+                } label: {
+                    Label("拆分这笔（多分类）", systemImage: "square.split.2x1")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+            }
+        }
+        .sheet(isPresented: $showSplit) {
+            SplitSheet(store: store, tx: tx)
         }
     }
 }

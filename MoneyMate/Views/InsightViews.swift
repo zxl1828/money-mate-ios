@@ -12,6 +12,10 @@ struct InsightPanel: View {
             reimbursementCard
             creditToolsCard
             goalCard
+            installmentCard
+            rolloverCard
+            reconcileCard
+            shareCard
             insightCards
             heatmapCard
         }
@@ -21,6 +25,10 @@ struct InsightPanel: View {
     private var reimbursementCard: some View { ReimbursementCard(store: store) }
     private var creditToolsCard: some View { CreditToolsCard(store: store) }
     private var goalCard: some View { GoalCard(store: store) }
+    private var installmentCard: some View { InstallmentCard(store: store) }
+    private var rolloverCard: some View { RolloverCard(store: store) }
+    private var reconcileCard: some View { ReconcileCard(store: store) }
+    private var shareCard: some View { ShareReportCard(store: store) }
 
     // MARK: 账单日 / 还款日预告
 
