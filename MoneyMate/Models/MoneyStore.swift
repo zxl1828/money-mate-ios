@@ -109,6 +109,7 @@ struct Tx: Identifiable, Codable, Hashable {
     var updatedAt: Date         // 最后修改时间（同步用）
     var memberName: String      // 共享账本记账人
     var reimbursable: Bool      // 待报销
+    var ledger: String          // 所属账本（多账本 / 旅行账本）
 
     init(id: UUID = UUID(),
          title: String,
@@ -132,7 +133,8 @@ struct Tx: Identifiable, Codable, Hashable {
          attachments: [TxAttachment] = [],
          updatedAt: Date = Date(),
          memberName: String = "",
-         reimbursable: Bool = false) {
+         reimbursable: Bool = false,
+         ledger: String = "日常") {
         self.id = id
         self.title = title
         self.amount = amount
@@ -156,6 +158,7 @@ struct Tx: Identifiable, Codable, Hashable {
         self.updatedAt = updatedAt
         self.memberName = memberName
         self.reimbursable = reimbursable
+        self.ledger = ledger
     }
 
     enum CodingKeys: String, CodingKey {
@@ -163,6 +166,7 @@ struct Tx: Identifiable, Codable, Hashable {
         case merchant, note, tags, location, latitude, longitude, recurrence, sourceID, autoPosted
         case kind, accountID, toAccountID, attachments, updatedAt, memberName
         case reimbursable
+        case ledger
     }
 
     // 兼容旧版本存档：缺失字段一律回落默认值
@@ -192,6 +196,7 @@ struct Tx: Identifiable, Codable, Hashable {
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? date
         memberName = try c.decodeIfPresent(String.self, forKey: .memberName) ?? ""
         reimbursable = try c.decodeIfPresent(Bool.self, forKey: .reimbursable) ?? false
+        ledger = try c.decodeIfPresent(String.self, forKey: .ledger) ?? "日常"
     }
 
     var isTransfer: Bool { kind == .transfer }
@@ -640,25 +645,32 @@ final class MoneyStore: ObservableObject {
 
     // MARK: 区间筛选
 
+    /// 当前账本（"" = 全部账本）
+    var scopedTxs: [Tx] {
+        let active = LedgerState.shared.active
+        guard !active.isEmpty else { return txs }
+        return txs.filter { $0.ledger == active }
+    }
+
     var monthTxs: [Tx] {
         let cal = Calendar.current
-        return txs.filter { cal.isDate($0.date, equalTo: Date(), toGranularity: .month) }
+        return scopedTxs.filter { cal.isDate($0.date, equalTo: Date(), toGranularity: .month) }
     }
 
     var todayTxs: [Tx] {
         let cal = Calendar.current
-        return txs.filter { cal.isDateInToday($0.date) }
+        return scopedTxs.filter { cal.isDateInToday($0.date) }
     }
 
     func txs(in days: Int) -> [Tx] {
         let cal = Calendar.current
         guard let start = cal.date(byAdding: .day, value: -(days - 1), to: cal.startOfDay(for: Date())) else { return [] }
-        return txs.filter { $0.date >= start }
+        return scopedTxs.filter { $0.date >= start }
     }
 
     var yearTxs: [Tx] {
         let cal = Calendar.current
-        return txs.filter { cal.isDate($0.date, equalTo: Date(), toGranularity: .year) }
+        return scopedTxs.filter { cal.isDate($0.date, equalTo: Date(), toGranularity: .year) }
     }
 
     // MARK: 汇总
@@ -692,7 +704,7 @@ final class MoneyStore: ObservableObject {
         let cal = Calendar.current
         guard let lastMonth = cal.date(byAdding: .month, value: -1, to: Date()) else { return nil }
         let day = cal.component(.day, from: Date())
-        let prev = txs.filter { tx in
+        let prev = scopedTxs.filter { tx in
             guard tx.isExpense, cal.isDate(tx.date, equalTo: lastMonth, toGranularity: .month) else { return false }
             return cal.component(.day, from: tx.date) <= day
         }.reduce(0) { $0 - $1.amountCNY }
@@ -741,7 +753,7 @@ final class MoneyStore: ObservableObject {
         var points: [DayPoint] = []
         for offset in stride(from: days - 1, through: 0, by: -1) {
             guard let day = cal.date(byAdding: .day, value: -offset, to: Date()) else { continue }
-            let total = txs.filter { $0.isExpense && cal.isDate($0.date, inSameDayAs: day) }
+            let total = scopedTxs.filter { $0.isExpense && cal.isDate($0.date, inSameDayAs: day) }
                 .reduce(0) { $0 - $1.amountCNY }
             points.append(DayPoint(date: cal.startOfDay(for: day), label: formatter.string(from: day), value: total))
         }
@@ -767,7 +779,7 @@ final class MoneyStore: ObservableObject {
         var points: [MonthPoint] = []
         for offset in stride(from: months - 1, through: 0, by: -1) {
             guard let month = cal.date(byAdding: .month, value: -offset, to: Date()) else { continue }
-            let list = txs.filter { cal.isDate($0.date, equalTo: month, toGranularity: .month) }
+            let list = scopedTxs.filter { cal.isDate($0.date, equalTo: month, toGranularity: .month) }
             let inc = list.filter { $0.isIncome }.reduce(0) { $0 + $1.amountCNY }
             let exp = list.filter { $0.isExpense }.reduce(0) { $0 - $1.amountCNY }
             points.append(MonthPoint(label: formatter.string(from: month), income: inc, expense: exp))

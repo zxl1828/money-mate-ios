@@ -377,6 +377,7 @@ struct HomePage: View {
         ScrollView {
             VStack(spacing: 18) {
                 header
+                LedgerBar(store: store)
                 heroCard
                 quickActions
                 TemplateStrip(store: store)

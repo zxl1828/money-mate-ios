@@ -697,7 +697,9 @@ struct AddSheet: View {
                     attachments: attachments,
                     updatedAt: Date(),
                     memberName: store.myName,
-                    reimbursable: editing?.reimbursable ?? false)
+                    reimbursable: editing?.reimbursable ?? false,
+                    ledger: editing?.ledger
+                        ?? (LedgerState.shared.isAll ? LedgerState.defaultLedger : LedgerState.shared.active))
         if editing != nil {
             store.update(tx)
         } else {
