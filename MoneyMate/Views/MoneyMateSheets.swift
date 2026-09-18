@@ -598,6 +598,8 @@ struct AddSheet: View {
         }
         let signed = isIncome ? value : -value
         let name = title.trimmingCharacters(in: .whitespaces)
+        var finalTags = tags
+        if LedgerFlags.tripMode && !finalTags.contains("旅行") { finalTags.append("旅行") }
         let tx = Tx(id: editing?.id ?? UUID(),
                     title: name.isEmpty ? category : name,
                     amount: signed,
@@ -607,7 +609,7 @@ struct AddSheet: View {
                     date: date,
                     merchant: merchant,
                     note: note,
-                    tags: tags,
+                    tags: finalTags,
                     location: location,
                     latitude: latitude,
                     longitude: longitude,
@@ -1163,6 +1165,7 @@ struct DetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showSplit = false
+    @State private var showAA = false
 
     var body: some View {
         NavigationStack {
@@ -1402,10 +1405,24 @@ struct DetailSheet: View {
                 }
                 .buttonStyle(.plain)
                 .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+
+                Button {
+                    showAA = true
+                } label: {
+                    Label("AA 分摊（别人欠我）", systemImage: "person.2.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             }
         }
         .sheet(isPresented: $showSplit) {
             SplitSheet(store: store, tx: tx)
+        }
+        .sheet(isPresented: $showAA) {
+            AASplitSheet(store: store, tx: tx)
         }
     }
 }

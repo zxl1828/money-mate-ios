@@ -528,6 +528,7 @@ final class MoneyStore: ObservableObject {
                                  members: members)
         guard let data = try? JSONEncoder().encode(snap) else { return }
         UserDefaults.standard.set(data, forKey: MoneyStore.key)
+        BackupHistory.snapshot(data)
         WidgetBridge.write(store: self)
         if cloudSync {
             Task { @MainActor in CloudSyncService.shared.push(data: data) }

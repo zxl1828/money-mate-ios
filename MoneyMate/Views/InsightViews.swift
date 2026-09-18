@@ -16,6 +16,10 @@ struct InsightPanel: View {
             rolloverCard
             reconcileCard
             shareCard
+            FinanceExtrasPanel(store: store)
+            DebtTrackerCard(store: store)
+            TripModeCard(store: store)
+            BackupCenterCard(store: store)
             insightCards
             heatmapCard
         }
