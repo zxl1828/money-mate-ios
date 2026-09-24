@@ -103,7 +103,7 @@ struct ContentView: View {
         }
         .fontDesign(.rounded)
         .tint(Palette.primary)
-        .animation(.spring(response: 0.22, dampingFraction: 0.93), value: tab)
+        .animation(.smooth(duration: 0.30), value: tab)
         .animation(.easeInOut(duration: 0.25), value: locked)
         .sheet(isPresented: $showAdd) { AddSheet(store: store) }
         .sheet(item: $editing) { tx in AddSheet(store: store, editing: tx) }
@@ -219,18 +219,21 @@ struct ContentView: View {
             .transition(pageTransition)
     }
 
-    /// 左右切屏：方向跟着标签顺序走，弹簧收紧到 0.22s，出手更利落
+    /// 切屏：只做「轻微位移 + 淡入」，不再整页横移。
+    ///
+    /// 整页横移会让每张玻璃卡在移动过程中一帧帧重新采样背景，真机上看起来
+    /// 就是「一闪一闪 + 切片」。小幅位移 + 淡入的观感更接近系统级丝滑转场。
     private var pageTransition: AnyTransition {
         .asymmetric(
-            insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-            removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity))
+            insertion: .offset(x: forward ? 18 : -18).combined(with: .opacity),
+            removal: .offset(x: forward ? -18 : 18).combined(with: .opacity))
     }
 
     private func select(_ item: MoneyTab) {
         guard item != tab else { return }
         Haptics.tap()
         forward = item.rawValue > tab.rawValue
-        withAnimation(.spring(response: 0.22, dampingFraction: 0.93)) { tab = item }
+        withAnimation(.smooth(duration: 0.30)) { tab = item }
     }
 
     @ViewBuilder

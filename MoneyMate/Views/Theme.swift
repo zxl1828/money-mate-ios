@@ -23,7 +23,8 @@ enum Palette {
     static let mint = adaptive(light: (0.42, 0.89, 0.79), dark: (0.38, 0.84, 0.74))
     static let rose = adaptive(light: (1.00, 0.55, 0.74), dark: (1.00, 0.60, 0.78))
     static let ink = adaptive(light: (0.24, 0.20, 0.40), dark: (0.95, 0.94, 0.99))
-    static let glassTint = adaptive(light: (1, 1, 1), dark: (1, 1, 1), alpha: (0.30, 0.12))
+    /// 玻璃叠加层：调得更透（原来是 0.30 / 0.12，白雾感重）。
+    static let glassTint = adaptive(light: (1, 1, 1), dark: (1, 1, 1), alpha: (0.14, 0.07))
     /// 背景光斑用的浅色块（深色下改为偏紫的暗光）
     static let blobLight = adaptive(light: (1, 1, 1), dark: (0.34, 0.29, 0.55))
 
@@ -76,16 +77,35 @@ extension View {
         RoundedRectangle(cornerRadius: r, style: .continuous)
     }
 
-    /// 液态玻璃面板：材质与透明度保持 iOS 26 原生 glassEffect
+    /// 液态玻璃面板：用 iOS 26 原生 glassEffect，并加一层顶缘镜面高光。
+    ///
+    /// 透亮度靠「低不透明度 + 镜面高光 + 内缘折射」做出来，而不是靠加白色雾。
     @ViewBuilder
     func glassPanel(_ r: CGFloat = Radius.card, strong: Bool = false, interactive: Bool = false) -> some View {
         let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
         if strong {
             self.glassEffect(interactive ? .regular.tint(Palette.glassTint).interactive()
                                         : .regular.tint(Palette.glassTint), in: shape)
+                .overlay(specularRim(shape, opacity: 0.50))
         } else {
             self.glassEffect(interactive ? .clear.interactive() : .clear, in: shape)
+                .overlay(specularRim(shape, opacity: 0.34))
         }
+    }
+
+    /// 顶缘镜面高光 + 内缘折射（液态玻璃的「亮边」就在这里）。
+    private func specularRim(_ shape: RoundedRectangle, opacity: Double) -> some View {
+        shape
+            .strokeBorder(
+                LinearGradient(
+                    colors: [Color.white.opacity(opacity), Color.white.opacity(opacity * 0.10)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 1.1
+            )
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
     }
 
     /// 玻璃卡内部的小色块
