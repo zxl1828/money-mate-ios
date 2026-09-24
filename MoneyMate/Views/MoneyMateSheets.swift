@@ -36,6 +36,8 @@ struct AddSheet: View {
     @State private var accountID: UUID?
     @State private var attachments: [TxAttachment] = []
     @State private var categoryTouched = false
+    /// 当前展开的大类（点大类就地展开细分）
+    @State private var expandedCategory: String?
     @State private var showCamera = false
     @State private var showScanner = false
     @State private var scanning = false
@@ -233,10 +235,12 @@ struct AddSheet: View {
                     Button {
                         category = name
                         categoryTouched = true
+                        let kids = CategoryTree.children(of: name)
+                        expandedCategory = (kids.isEmpty || expandedCategory == name) ? nil : name
                         Haptics.select()
                     } label: {
                         VStack(spacing: 6) {
-                            Image(systemName: store.categoryIcon(name))
+                            Image(systemName: store.categoryIcon(CategoryTree.root(of: name)))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(category == name ? .white : Palette.primary)
                                 .frame(width: 34, height: 34)
@@ -246,6 +250,11 @@ struct AddSheet: View {
                             Text(name)
                                 .font(.system(size: 11, design: .rounded).weight(category == name ? .bold : .regular))
                                 .foregroundStyle(Palette.ink.opacity(category == name ? 0.95 : 0.65))
+                            if !CategoryTree.children(of: name).isEmpty {
+                                Image(systemName: expandedCategory == name ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(Palette.ink.opacity(0.45))
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
@@ -253,6 +262,46 @@ struct AddSheet: View {
                     .buttonStyle(.plain)
                     .liquidGlass(category == name ? .regular.tint(Palette.glassTint) : .clear,
                                  in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+                }
+            }
+            // 细分展开区：点大类后出现，选完自动收起
+            if let parent = expandedCategory {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("\(parent) · 细分")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.ink.opacity(0.65))
+                        Spacer()
+                        Button {
+                            expandedCategory = nil
+                        } label: {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Palette.ink.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach([parent] + CategoryTree.children(of: parent), id: \.self) { item in
+                                Button {
+                                    category = item
+                                    categoryTouched = true
+                                    expandedCategory = nil
+                                    Haptics.select()
+                                } label: {
+                                    Text(item == parent ? "整个\(parent)" : item)
+                                        .font(.system(size: 12, design: .rounded))
+                                        .foregroundStyle(category == item ? Palette.primary : Palette.ink.opacity(0.72))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                }
+                                .buttonStyle(.plain)
+                                .liquidGlass(category == item ? .regular.tint(Palette.glassTint) : .clear,
+                                             in: Capsule())
+                            }
+                        }
+                    }
                 }
             }
         }
