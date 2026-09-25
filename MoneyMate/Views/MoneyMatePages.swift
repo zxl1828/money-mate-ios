@@ -125,7 +125,7 @@ extension MoneyStore {
             result.append("已经连续记账 " + String(streak) + " 天，坚持就是最好的理财习惯")
         }
         if let big = txs(in: 30).filter({ $0.isExpense }).max(by: { $0.amountCNY < $1.amountCNY }) {
-            let who = big.payee.isEmpty ? big.category : big.category + "·" + big.payee
+            let who = big.merchant.isEmpty ? big.category : big.category + "·" + big.merchant
             result.append("本期最大一笔：" + who + " " + money(big.amountCNY))
         }
         return result

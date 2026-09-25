@@ -1,17 +1,11 @@
 import SwiftUI
 import UIKit
 
-/// 用于 sheet(item:) 的日期包一层（Date 本身不满足 Identifiable）
-private struct DayBox: Identifiable {
-    let id = UUID()
-    let day: Date
-}
-
 /// 日历记账：月历看每天的账 + 节假日 + 人情往来（给谁送了什么）。
-/// 与安卓 `calendar_page.dart` 一一对应。
+/// 与安卓 `calendar_page.dart` 对应。
 struct GiftRecord: Identifiable, Codable, Hashable {
     var id = UUID()
-    var date: String        // yyyy-MM-dd
+    var date: String
     var person: String
     var relation: String
     var occasion: String
@@ -19,18 +13,22 @@ struct GiftRecord: Identifiable, Codable, Hashable {
     var amount: Double
 }
 
+private struct DayBox: Identifiable {
+    let id = UUID()
+    let day: Date
+}
+
 struct CalendarView: View {
     @ObservedObject var store: MoneyStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var month = Date()
-    @State private var gifts: [GiftRecord] = CalendarView.load()
+    @State private var gifts: [GiftRecord] = CalendarView.loadGifts()
     @State private var daySheet: DayBox?
 
-    /// 固定公历节日（农历节日每年不同，用「人情/重要日子」自己加）
-    private let holidays: [String: String] = ["01-01": "元旦", "05-01": "劳动节", "10-01": "国庆节"]
-
-    private let weekdays = ["日", "一", "二", "三", "四", "五", "六"]
+    private let holidays: [String: String] = [
+        "01-01": "元旦", "05-01": "劳动节", "10-01": "国庆节"
+    ]
 
     var body: some View {
         NavigationStack {
@@ -50,13 +48,11 @@ struct CalendarView: View {
                     Button("完成") { dismiss() }
                 }
             }
-            .sheet(item: $daySheet) { day in
-                dayDetail(day.day)
+            .sheet(item: $daySheet) { box in
+                dayDetail(box.day)
             }
         }
     }
-
-    // MARK: 月历
 
     private var monthCard: some View {
         VStack(spacing: 10) {
@@ -72,13 +68,16 @@ struct CalendarView: View {
             .foregroundStyle(Palette.ink.opacity(0.8))
 
             HStack {
-                ForEach(weekdays, id: \.self) { w in
-                    Text(w).font(.caption2).foregroundStyle(Palette.ink.opacity(0.55))
+                ForEach(["日", "一", "二", "三", "四", "五", "六"], id: \.self) { w in
+                    Text(w)
+                        .font(.caption2)
+                        .foregroundStyle(Palette.ink.opacity(0.55))
                         .frame(maxWidth: .infinity)
                 }
             }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7),
+                      spacing: 4) {
                 ForEach(daysInMonth, id: \.self) { day in
                     dayCell(day)
                 }
@@ -91,106 +90,121 @@ struct CalendarView: View {
 
     private func dayCell(_ day: Date) -> some View {
         let key = Self.key(day)
-        let spent = dayTxs(day).filter { $0.isExpense }.reduce(0) { $0 + abs($1.amountCNY) }
+        let spent = daySpent(day)
         let holiday = holidays[String(key.suffix(5))]
         let hasGift = gifts.contains { $0.date == key }
         let isToday = Calendar.current.isDateInToday(day)
+        let dayNumber = Calendar.current.component(.day, from: day)
+        let bg: Color = isToday ? Palette.primary.opacity(0.16)
+            : (holiday != nil ? Palette.rose.opacity(0.10) : Color.clear)
         return Button {
             Haptics.tap()
             daySheet = DayBox(day: day)
         } label: {
             VStack(spacing: 1) {
-                Text(String(Calendar.current.component(.day, from: day)))
+                Text("\(dayNumber)")
                     .font(.system(size: 12, weight: isToday ? .bold : .regular))
                     .foregroundStyle(Palette.ink)
                 if let holiday {
-                    Text(holiday).font(.system(size: 8)).foregroundStyle(Palette.rose).lineLimit(1)
+                    Text(holiday).font(.system(size: 8))
+                        .foregroundStyle(Palette.rose).lineLimit(1)
                 }
                 if spent > 0 {
-                    Text("¥" + String(Int(spent))).font(.system(size: 8))
+                    Text("¥\(Int(spent))").font(.system(size: 8))
                         .foregroundStyle(Palette.ink.opacity(0.6)).lineLimit(1)
                 }
                 if hasGift {
-                    Image(systemName: "gift.fill").font(.system(size: 8)).foregroundStyle(Palette.primary)
+                    Image(systemName: "gift.fill").font(.system(size: 8))
+                        .foregroundStyle(Palette.primary)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
-        .background(isToday ? Palette.primary.opacity(0.16) : (holiday != nil ? Palette.rose.opacity(0.10) : .clear),
-                    in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+        .background(bg, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
     }
-
-    // MARK: 人情往来
 
     private var giftCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "人情往来",
-                          subtitle: String(monthGifts.count) + " 条 · 点日历上的日子添加")
+                          subtitle: "\(monthGifts.count) 条 · 点日历上的日子添加")
             if monthGifts.isEmpty {
                 Text("本月还没有记录，比如「二姨生日 · 送按摩仪」")
-                    .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
-            } else {
-                ForEach(monthGifts) { gift in
-                    HStack(alignment: .top, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(gift.person + "（" + gift.relation + "）")
-                                .font(.system(.footnote, design: .rounded).weight(.semibold))
-                            Text(String(gift.date.suffix(5)) + " · " + gift.occasion + " · " + gift.item)
-                                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
-                        }
-                        Spacer(minLength: 0)
-                        if gift.amount > 0 {
-                            Text("¥" + String(Int(gift.amount))).font(.caption)
-                        }
-                        Button {
-                            gifts.removeAll { $0.id == gift.id }
-                            Self.save(gifts)
-                        } label: {
-                            Image(systemName: "trash").font(.system(size: 12))
-                                .foregroundStyle(Palette.rose)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                    .font(.caption2)
+                    .foregroundStyle(Palette.ink.opacity(0.6))
             }
-            glassButton(title: "新增人情记录", systemImage: "plus") {
+            ForEach(monthGifts) { gift in
+                giftRow(gift)
+            }
+            Button {
                 daySheet = DayBox(day: Date())
+            } label: {
+                Label("新增人情记录", systemImage: "plus")
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
             }
+            .buttonStyle(.plain)
+            .liquidGlass(.clear, in: Capsule())
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
     }
 
+    private func giftRow(_ gift: GiftRecord) -> some View {
+        let title = gift.person + "（" + gift.relation + "）"
+        let sub = String(gift.date.suffix(5)) + " · " + gift.occasion + " · " + gift.item
+        let money = gift.amount > 0 ? "¥" + String(Int(gift.amount)) : ""
+        return HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(.footnote, design: .rounded).weight(.semibold))
+                Text(sub).font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+            }
+            Spacer(minLength: 0)
+            Text(money).font(.caption)
+            Button {
+                gifts.removeAll { $0.id == gift.id }
+                Self.saveGifts(gifts)
+            } label: {
+                Image(systemName: "trash").font(.system(size: 12))
+                    .foregroundStyle(Palette.rose)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     private func dayDetail(_ day: Date) -> some View {
         let txs = dayTxs(day)
         let key = Self.key(day)
+        let sub = holidays[String(key.suffix(5))] ?? "\(txs.count) 笔"
         return NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text(Self.longLabel(day)).font(.system(.title3, design: .rounded).weight(.bold))
-                    Text(holidays[String(key.suffix(5))] ?? (String(txs.count) + " 笔"))
-                        .font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                    Text(Self.longLabel(day))
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                    Text(sub).font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
                     if txs.isEmpty {
-                        Text("这天还没有记账").font(.caption2)
+                        Text("这天还没有记账")
+                            .font(.caption2)
                             .foregroundStyle(Palette.ink.opacity(0.6))
-                    } else {
-                        ForEach(txs) { tx in
-                            HStack {
-                                Text(tx.category + (tx.payee.isEmpty ? "" : " " + tx.payee))
-                                    .font(.footnote).lineLimit(1)
-                                Spacer()
-                                Text((tx.isExpense ? "-" : "+") + store.money(abs(tx.amountCNY)))
-                                    .font(.footnote)
-                                    .foregroundStyle(tx.isExpense ? Palette.rose : Palette.mint)
-                            }
-                        }
                     }
-                    glassButton(title: "记一条人情（送礼 / 收礼）", systemImage: "gift") {
+                    ForEach(txs) { tx in
+                        txRow(tx)
+                    }
+                    Button {
                         addGift(on: key)
+                    } label: {
+                        Label("记一条人情（送礼 / 收礼）", systemImage: "gift")
+                            .font(.system(.footnote, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Palette.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
                     }
+                    .buttonStyle(.plain)
+                    .liquidGlass(.clear, in: Capsule())
                 }
                 .padding(20)
             }
@@ -198,29 +212,35 @@ struct CalendarView: View {
         }
     }
 
+    private func txRow(_ tx: Tx) -> some View {
+        let who = tx.merchant.isEmpty ? tx.category : tx.category + " " + tx.merchant
+        let amount = (tx.isExpense ? "-" : "+") + store.money(abs(tx.amountCNY))
+        let color = tx.isExpense ? Palette.rose : Palette.mint
+        return HStack {
+            Text(who).font(.footnote).lineLimit(1)
+            Spacer()
+            Text(amount).font(.footnote).foregroundStyle(color)
+        }
+    }
+
     private func addGift(on date: String) {
-        var person = ""
-        var relation = "朋友"
-        var occasion = ""
-        var item = ""
-        var amount = ""
-        // 用系统输入弹窗保持代码轻量（后续可换成完整表单）
-        let alert = UIAlertController(title: "人情记录 " + date, message: "给谁 / 关系 / 场合 / 礼物 / 金额（用 / 分隔）", preferredStyle: .alert)
+        let alert = UIAlertController(
+            title: "人情记录 \(date)",
+            message: "按「给谁 / 关系 / 场合 / 礼物 / 金额」填写",
+            preferredStyle: .alert)
         alert.addTextField { $0.placeholder = "二姨 / 亲戚 / 生日 / 按摩仪 / 588" }
         alert.addAction(UIAlertAction(title: "取消", style: .cancel))
         alert.addAction(UIAlertAction(title: "保存", style: .default) { _ in
             let text = alert.textFields?.first?.text ?? ""
             let parts = text.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
-            if parts.count > 0 { person = parts[0] }
-            if parts.count > 1 { relation = parts[1] }
-            if parts.count > 2 { occasion = parts[2] }
-            if parts.count > 3 { item = parts[3] }
-            if parts.count > 4 { amount = parts[4] }
-            guard !person.isEmpty else { return }
+            guard let person = parts.first, !person.isEmpty else { return }
+            let relation = parts.count > 1 ? parts[1] : "朋友"
+            let occasion = parts.count > 2 ? parts[2] : ""
+            let item = parts.count > 3 ? parts[3] : ""
+            let amount = parts.count > 4 ? (Double(parts[4]) ?? 0) : 0
             gifts.append(GiftRecord(date: date, person: person, relation: relation,
-                                    occasion: occasion, item: item,
-                                    amount: Double(amount) ?? 0))
-            Self.save(gifts)
+                                    occasion: occasion, item: item, amount: amount))
+            Self.saveGifts(gifts)
             Haptics.success()
         })
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -228,8 +248,6 @@ struct CalendarView: View {
             root.present(alert, animated: true)
         }
     }
-
-    // MARK: 工具
 
     private var monthTitle: String {
         let f = DateFormatter()
@@ -240,7 +258,8 @@ struct CalendarView: View {
     private var daysInMonth: [Date] {
         let cal = Calendar.current
         guard let range = cal.range(of: .day, in: .month, for: month),
-              let first = cal.date(from: cal.dateComponents([.year, .month], from: month)) else { return [] }
+              let first = cal.date(from: cal.dateComponents([.year, .month], from: month))
+        else { return [] }
         return range.compactMap { cal.date(byAdding: .day, value: $0 - 1, to: first) }
     }
 
@@ -254,9 +273,15 @@ struct CalendarView: View {
         return store.txs(in: 400).filter { cal.isDate($0.date, inSameDayAs: day) }
     }
 
+    private func daySpent(_ day: Date) -> Double {
+        dayTxs(day).filter { $0.isExpense }.reduce(0) { $0 + abs($1.amountCNY) }
+    }
+
     private func shift(_ delta: Int) {
         Haptics.tap()
-        if let m = Calendar.current.date(byAdding: .month, value: delta, to: month) { month = m }
+        if let m = Calendar.current.date(byAdding: .month, value: delta, to: month) {
+            month = m
+        }
     }
 
     private static func key(_ d: Date) -> String {
@@ -271,13 +296,14 @@ struct CalendarView: View {
         return f.string(from: d)
     }
 
-    private static func load() -> [GiftRecord] {
+    private static func loadGifts() -> [GiftRecord] {
         guard let data = UserDefaults.standard.data(forKey: "moneymate.gifts"),
-              let list = try? JSONDecoder().decode([GiftRecord].self, from: data) else { return [] }
+              let list = try? JSONDecoder().decode([GiftRecord].self, from: data)
+        else { return [] }
         return list
     }
 
-    private static func save(_ list: [GiftRecord]) {
+    private static func saveGifts(_ list: [GiftRecord]) {
         if let data = try? JSONEncoder().encode(list) {
             UserDefaults.standard.set(data, forKey: "moneymate.gifts")
         }
