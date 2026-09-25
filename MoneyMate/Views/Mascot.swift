@@ -6,9 +6,9 @@ enum MascotMood {
     case happy, cheer, cool, worried, panic, sleepy
 
     static func forBudget(_ ratio: Double) -> MascotMood {
-        if ratio >= 1 { return .panic }
-        if ratio >= 0.85 { return .worried }
-        if ratio >= 0.60 { return .cool }
+        // 与安卓一致：≤80% 笑脸，80%~100% 平嘴，>100% 哭脸
+        if ratio > 1.0 { return .panic }
+        if ratio >= 0.8 { return .worried }
         return .happy
     }
 

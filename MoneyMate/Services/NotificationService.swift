@@ -31,10 +31,26 @@ final class NotificationService {
             scheduleDaily(store: store, center: center)
             scheduleBudget(store: store, center: center)
             scheduleCredits(store: store, center: center)
+            scheduleAnnual(center: center)
         }
     }
 
     // MARK: - 具体提醒
+
+    /// 支付年报：每年 1 月 1 日 9:00 推送上一年的账单汇总
+    private func scheduleAnnual(center: UNUserNotificationCenter) {
+        var comps = DateComponents()
+        comps.month = 1
+        comps.day = 1
+        comps.hour = 9
+        comps.minute = 0
+        add(center,
+            id: "annual-report",
+            title: "新的一年，先看一遍去年的账",
+            body: "年度账单已生成：去年花了多少、攒下多少，点开看看",
+            comps: comps,
+            repeats: true)
+    }
 
     private func scheduleDaily(store: MoneyStore, center: UNUserNotificationCenter) {
         guard store.dailyReminder else { return }
