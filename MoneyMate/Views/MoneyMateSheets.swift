@@ -287,7 +287,6 @@ struct AddSheet: View {
                                 Button {
                                     category = item
                                     categoryTouched = true
-                                    expandedCategory = nil
                                     Haptics.select()
                                 } label: {
                                     Text(item == parent ? "整个\(parent)" : item)
