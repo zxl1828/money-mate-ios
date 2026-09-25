@@ -98,6 +98,36 @@ extension MoneyStore {
         } else if budgetRatio >= 0.85 {
             result.append("预算已用 " + String(Int(budgetRatio * 100)) + "%，接下来几天建议少花点")
         }
+        // 更丰富的洞察（与安卓一致）
+        if income > 0 {
+            let rate = (income - expense) / income
+            if rate >= 0.3 {
+                result.append("储蓄率 " + String(Int(rate * 100)) + "%，很健康，保持这个节奏")
+            } else if rate >= 0 {
+                result.append("储蓄率只有 " + String(Int(rate * 100)) + "%，可以从非必要支出里再挤一点")
+            } else {
+                result.append("本月支出已经超过收入，先看分类排行砍掉最贵那项")
+            }
+        }
+        let cal = Calendar.current
+        let daySet = Set(txs(in: 90).map { cal.startOfDay(for: $0.date) })
+        var streak = 0
+        var cursor = cal.startOfDay(for: Date())
+        if !daySet.contains(cursor), let y = cal.date(byAdding: .day, value: -1, to: cursor) {
+            cursor = y
+        }
+        while daySet.contains(cursor) {
+            streak += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = prev
+        }
+        if streak >= 3 {
+            result.append("已经连续记账 " + String(streak) + " 天，坚持就是最好的理财习惯")
+        }
+        if let big = txs(in: 30).filter({ $0.isExpense }).max(by: { $0.amountCNY < $1.amountCNY }) {
+            let who = big.payee.isEmpty ? big.category : big.category + "·" + big.payee
+            result.append("本期最大一笔：" + who + " " + money(big.amountCNY))
+        }
         return result
     }
 }
@@ -751,6 +781,7 @@ struct SettingsPage: View {
     @State private var showExport = false
     @State private var showImport = false
     @State private var showCategoryBudget = false
+    @State private var showCalendar = false
     @State private var showCategories = false
     @State private var showLedgerMerge = false
     @State private var shareFile: ShareFile?
@@ -794,6 +825,9 @@ struct SettingsPage: View {
         }
         .sheet(isPresented: $showCategoryBudget) {
             CategoryBudgetSheet(store: store)
+        }
+        .sheet(isPresented: $showCalendar) {
+            CalendarView(store: store)
         }
         .sheet(isPresented: $showCategories) {
             CategoryManagerSheet(store: store)
@@ -882,6 +916,31 @@ struct SettingsPage: View {
                 }
                 glassButton(title: "分类预算", systemImage: "chart.pie.fill") {
                     showCategoryBudget = true
+                }
+                glassButton(title: "日历记账", systemImage: "calendar") {
+                    showCalendar = true
+                }
+            }
+            // 非常规支出：标了就不参与预算建议（节日 / 婚礼 / 一次性大件）
+            Text("非常规支出（不计入预算建议）")
+                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(store.expenseCategories.map(\.name), id: \.self) { name in
+                        Button {
+                            store.toggleIrregularCategory(name)
+                            Haptics.select()
+                        } label: {
+                            Text(name)
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(store.irregularCategories.contains(name)
+                                                 ? Palette.primary : Palette.ink.opacity(0.7))
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        .liquidGlass(store.irregularCategories.contains(name)
+                                     ? .regular.tint(Palette.glassTint) : .clear, in: Capsule())
+                    }
                 }
             }
             ForEach(store.overBudgetCategories.prefix(3)) { item in

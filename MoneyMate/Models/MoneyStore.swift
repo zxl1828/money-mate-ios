@@ -717,7 +717,9 @@ final class MoneyStore: ObservableObject {
 
     /// 智能预算建议：近 30 日日均支出 推算整月，再留 8% 余量
     func budgetSuggestion() -> Double {
-        let recent = txs(in: 30).filter { $0.isExpense }
+        // 标成「非常规」的分类（节日/婚礼/一次性大件）不参与建议，避免月预算被整体抬高
+        let irregular = irregularCategories
+        let recent = txs(in: 30).filter { $0.isExpense && !irregular.contains($0.category) }
         guard !recent.isEmpty else { return budget }
         let calendar = Calendar.current
         let earliest = recent.map(\.date).min() ?? Date()
@@ -726,6 +728,25 @@ final class MoneyStore: ObservableObject {
         let days = calendar.range(of: .day, in: .month, for: Date())?.count ?? 30
         let raw = avg * Double(days) * 1.08
         return max((raw / 100).rounded() * 100, 500)
+    }
+
+    /// 标记为「非常规支出」的分类（与安卓 `irregular_categories` 对应）
+    var irregularCategories: [String] {
+        get { UserDefaults.standard.stringArray(forKey: "moneymate.budget.irregular") ?? [] }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "moneymate.budget.irregular")
+            objectWillChange.send()
+        }
+    }
+
+    func toggleIrregularCategory(_ name: String) {
+        var list = irregularCategories
+        if let i = list.firstIndex(of: name) {
+            list.remove(at: i)
+        } else {
+            list.append(name)
+        }
+        irregularCategories = list
     }
 
     func categoryBudget(_ category: String) -> Double {
