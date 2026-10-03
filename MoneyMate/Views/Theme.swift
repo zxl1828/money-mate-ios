@@ -81,15 +81,22 @@ extension View {
     ///
     /// 透亮度靠「低不透明度 + 镜面高光 + 内缘折射」做出来，而不是靠加白色雾。
     @ViewBuilder
-    func glassPanel(_ r: CGFloat = Radius.card, strong: Bool = false, interactive: Bool = false) -> some View {
+    func glassPanel(_ r: CGFloat = Radius.card, strong: Bool = false, interactive: Bool = false, tiltable: Bool = false) -> some View {
         let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
-        if strong {
-            self.glassEffect(interactive ? .regular.tint(Palette.glassTint).interactive()
-                                        : .regular.tint(Palette.glassTint), in: shape)
-                .overlay(specularRim(shape, opacity: 0.50))
+        let base = Group {
+            if strong {
+                self.glassEffect(interactive ? .regular.tint(Palette.glassTint).interactive()
+                                            : .regular.tint(Palette.glassTint), in: shape)
+                    .overlay(specularRim(shape, opacity: 0.50))
+            } else {
+                self.glassEffect(interactive ? .clear.interactive() : .clear, in: shape)
+                    .overlay(specularRim(shape, opacity: 0.34))
+            }
+        }
+        if tiltable || interactive {
+            base.tiltAndSheen(maxAngle: 7.0, cornerRadius: r)
         } else {
-            self.glassEffect(interactive ? .clear.interactive() : .clear, in: shape)
-                .overlay(specularRim(shape, opacity: 0.34))
+            base
         }
     }
 
@@ -150,5 +157,303 @@ struct SectionHeader: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+}
+
+
+// ============================================================================
+// 7 项高级流体/物理/拟态交互动效组件 (iOS 26 液态玻璃进阶)
+// ============================================================================
+
+// MARK: - 1. 跟随触摸位置的 3D 透视倾斜与镜像反射流光（松手带 spring 阻尼回正）
+
+struct TiltAndSheenModifier: ViewModifier {
+    var maxAngle: Double = 7.0
+    var cornerRadius: CGFloat = Radius.card
+
+    @State private var dragOffset: CGSize = .zero
+    @State private var viewSize: CGSize = .zero
+    @State private var isTouching: Bool = false
+
+    func body(content: Content) -> some View {
+        let halfW = max(viewSize.width / 2, 1)
+        let halfH = max(viewSize.height / 2, 1)
+        let normX = min(max(Double(dragOffset.width / halfW), -1.0), 1.0)
+        let normY = min(max(Double(dragOffset.height / halfH), -1.0), 1.0)
+        let pitch = -normY * maxAngle
+        let roll = normX * maxAngle
+        let unitX = (normX + 1.0) / 2.0
+        let unitY = (normY + 1.0) / 2.0
+
+        content
+            .rotation3DEffect(.degrees(pitch), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
+            .rotation3DEffect(.degrees(roll), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+            .overlay {
+                if isTouching {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.white.opacity(0.36), Color.white.opacity(0.08), Color.clear],
+                                center: UnitPoint(x: unitX, y: unitY),
+                                startRadius: 0,
+                                endRadius: max(viewSize.width, viewSize.height) * 0.75
+                            )
+                        )
+                        .blendMode(.plusLighter)
+                        .allowsHitTesting(false)
+                }
+            }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: TiltSizeKey.self, value: proxy.size)
+                }
+            )
+            .onPreferenceChange(TiltSizeKey.self) { size in
+                viewSize = size
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { val in
+                        isTouching = true
+                        dragOffset = CGSize(
+                            width: val.location.x - halfW,
+                            height: val.location.y - halfH
+                        )
+                    }
+                    .onEnded { _ in
+                        withAnimation(.interpolatingSpring(stiffness: 280, damping: 20)) {
+                            isTouching = false
+                            dragOffset = .zero
+                        }
+                    }
+            )
+    }
+}
+
+private struct TiltSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func tiltAndSheen(maxAngle: Double = 7.0, cornerRadius: CGFloat = Radius.card) -> some View {
+        self.modifier(TiltAndSheenModifier(maxAngle: maxAngle, cornerRadius: cornerRadius))
+    }
+}
+
+// MARK: - 2. 胶囊按钮向弹窗面板流体形态变换
+
+struct FluidMorphCapsuleView<Collapsed: View, Expanded: View>: View {
+    let collapsed: Collapsed
+    let expanded: Expanded
+    var collapsedSize: CGSize = CGSize(width: 58, height: 58)
+    var expandedSize: CGSize = CGSize(width: 340, height: 460)
+    var collapsedRadius: CGFloat = 29
+    var expandedRadius: CGFloat = Radius.card
+    var onToggle: ((Bool) -> Void)? = nil
+
+    @State private var isExpanded = false
+
+    init(
+        collapsedSize: CGSize = CGSize(width: 58, height: 58),
+        expandedSize: CGSize = CGSize(width: 340, height: 460),
+        collapsedRadius: CGFloat = 29,
+        expandedRadius: CGFloat = Radius.card,
+        onToggle: ((Bool) -> Void)? = nil,
+        @ViewBuilder collapsed: () -> Collapsed,
+        @ViewBuilder expanded: () -> Expanded
+    ) {
+        self.collapsedSize = collapsedSize
+        self.expandedSize = expandedSize
+        self.collapsedRadius = collapsedRadius
+        self.expandedRadius = expandedRadius
+        self.onToggle = onToggle
+        self.collapsed = collapsed()
+        self.expanded = expanded()
+    }
+
+    var body: some View {
+        let currentWidth = isExpanded ? expandedSize.width : collapsedSize.width
+        let currentHeight = isExpanded ? expandedSize.height : collapsedSize.height
+        let currentRadius = isExpanded ? expandedRadius : collapsedRadius
+
+        ZStack {
+            if isExpanded {
+                expanded
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            } else {
+                collapsed
+                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
+            }
+        }
+        .frame(width: currentWidth, height: currentHeight)
+        .glassPanel(currentRadius, strong: true, interactive: true)
+        .contentShape(RoundedRectangle(cornerRadius: currentRadius, style: .continuous))
+        .onTapGesture {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.85)) {
+                isExpanded.toggle()
+                onToggle?(isExpanded)
+            }
+        }
+    }
+}
+
+// MARK: - 4. 阻尼橡皮筋回弹底部抽屉（根据手势滑动速度自动计算吸附）
+
+struct RubberBandSheetModifier: ViewModifier {
+    var onDismiss: () -> Void
+    @State private var offset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: offset)
+            .gesture(
+                DragGesture()
+                    .onChanged { val in
+                        let dy = val.translation.height
+                        if dy < 0 {
+                            let over = -dy
+                            offset = -18.0 * log(1.0 + Double(over) / 18.0)
+                        } else {
+                            offset = dy
+                        }
+                    }
+                    .onEnded { val in
+                        let velocity = val.predictedEndTranslation.height
+                        if velocity > 180 || val.translation.height > 140 {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                                onDismiss()
+                            }
+                        } else {
+                            withAnimation(.interpolatingSpring(stiffness: 320, damping: 24)) {
+                                offset = 0
+                            }
+                        }
+                    }
+            )
+    }
+}
+
+extension View {
+    func rubberBandSheet(onDismiss: @escaping () -> Void) -> some View {
+        self.modifier(RubberBandSheetModifier(onDismiss: onDismiss))
+    }
+}
+
+// MARK: - 5. 旋转渐变描边与呼吸弥散背光
+
+struct AuraBorderModifier: ViewModifier {
+    var cornerRadius: CGFloat = Radius.card
+    var borderWidth: CGFloat = 1.6
+    var colors: [Color] = [Palette.primary, Palette.lilac, Palette.rose, Palette.mint, Palette.primary]
+
+    @State private var rotation: Double = 0
+    @State private var breathing: Bool = false
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        content
+            .overlay {
+                shape
+                    .strokeBorder(
+                        AngularGradient(
+                            colors: colors,
+                            center: .center,
+                            startAngle: .degrees(rotation),
+                            endAngle: .degrees(rotation + 360)
+                        ),
+                        lineWidth: borderWidth
+                    )
+                    .allowsHitTesting(false)
+            }
+            .background {
+                shape
+                    .fill(colors.first ?? Palette.primary)
+                    .opacity(breathing ? 0.32 : 0.14)
+                    .blur(radius: breathing ? 28 : 18)
+                    .scaleEffect(breathing ? 1.03 : 0.98)
+                    .allowsHitTesting(false)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 5.0).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+                withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                    breathing = true
+                }
+            }
+    }
+}
+
+extension View {
+    func auraBorder(cornerRadius: CGFloat = Radius.card, borderWidth: CGFloat = 1.6) -> some View {
+        self.modifier(AuraBorderModifier(cornerRadius: cornerRadius, borderWidth: borderWidth))
+    }
+}
+
+// MARK: - 6. 列表元素交错弹性向上滑入
+
+struct StaggeredSlideInModifier: ViewModifier {
+    let index: Int
+    var offsetY: CGFloat = 20
+    @State private var appeared = false
+
+    func body(content: Content) -> some View {
+        content
+            .offset(y: appeared ? 0 : offsetY)
+            .opacity(appeared ? 1 : 0)
+            .onAppear {
+                let delay = Double(min(index, 8)) * 0.035
+                withAnimation(.interpolatingSpring(stiffness: 300, damping: 22).delay(delay)) {
+                    appeared = true
+                }
+            }
+    }
+}
+
+extension View {
+    func staggeredSlideIn(index: Int, offsetY: CGFloat = 20) -> some View {
+        self.modifier(StaggeredSlideInModifier(index: index, offsetY: offsetY))
+    }
+}
+
+// MARK: - 7. 物理弹性压缩与 Spring Overshoot 按钮样式
+
+struct SpringOvershootButtonStyle: ButtonStyle {
+    var cornerRadius: CGFloat = Radius.button
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .overlay {
+                if configuration.isPressed {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.30), Color.black.opacity(0.12)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 2.5
+                        )
+                        .blur(radius: 1.5)
+                        .allowsHitTesting(false)
+                }
+            }
+            .animation(
+                configuration.isPressed
+                    ? .easeOut(duration: 0.10)
+                    : .interpolatingSpring(stiffness: 350, damping: 14),
+                value: configuration.isPressed
+            )
+    }
+}
+
+extension View {
+    func springButton(cornerRadius: CGFloat = Radius.button) -> some View {
+        self.buttonStyle(SpringOvershootButtonStyle(cornerRadius: cornerRadius))
     }
 }

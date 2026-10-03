@@ -336,8 +336,9 @@ struct TransactionsPage: View {
             }
             GlassEffectContainer(spacing: 10) {
                 VStack(spacing: 10) {
-                    ForEach(group.txs) { tx in
+                    ForEach(Array(group.txs.enumerated()), id: \.element.id) { index, tx in
                         TxRow(tx: tx, namespace: namespace, showsTags: true) { onOpen(tx) }
+                            .staggeredSlideIn(index: index)
                             .contextMenu {
                                 Button {
                                     onOpen(tx)
@@ -390,11 +391,58 @@ struct TransactionsPage: View {
 }
 // MARK: - 统计页
 
+struct ChartDetailRow: Identifiable {
+    let id = UUID()
+    let label: String
+    let value: String
+}
+
+struct ChartDetailSheet: View {
+    let title: String
+    let rows: [ChartDetailRow]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(rows) { row in
+                        HStack {
+                            Text(row.label)
+                                .font(.system(.footnote, design: .rounded))
+                                .foregroundStyle(Palette.ink.opacity(0.85))
+                            Spacer()
+                            Text(row.value)
+                                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                                .foregroundStyle(Palette.primary)
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .innerTile(Radius.small, opacity: 0.10)
+                    }
+                }
+                .padding(20)
+            }
+            .background(GlassBackground())
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
+            .rubberBandSheet { dismiss() }
+        }
+    }
+}
+
 struct StatsPage: View {
     @ObservedObject var store: MoneyStore
     var namespace: Namespace.ID
 
     @State private var range: StatsRange = .week
+    @State private var detailTitle: String? = nil
+    @State private var detailRows: [ChartDetailRow] = []
 
     var body: some View {
         ScrollView {
@@ -415,6 +463,42 @@ struct StatsPage: View {
         }
         .scrollIndicators(.hidden)
         .animation(.spring(response: 0.24, dampingFraction: 0.92), value: range)
+        .sheet(isPresented: Binding(
+            get: { detailTitle != nil },
+            set: { if !$0 { detailTitle = nil } }
+        )) {
+            if let title = detailTitle {
+                ChartDetailSheet(title: title, rows: detailRows)
+            }
+        }
+    }
+
+    private func showTrendDetail() {
+        Haptics.tap()
+        detailTitle = "支出趋势 · 逐项明细"
+        detailRows = points.map { p in
+            ChartDetailRow(label: p.label, value: "支出 " + store.money(p.expense) + " · 收入 " + store.money(p.income))
+        }
+    }
+
+    private func showCategoryDetail() {
+        Haptics.tap()
+        detailTitle = "分类占比 · 全部明细"
+        let cats = store.rangeCategories(range)
+        let total = max(store.rangeExpense(range), 1)
+        detailRows = cats.map { c in
+            let pct = Int((c.value / total) * 100)
+            return ChartDetailRow(label: c.label + "  " + String(pct) + "%", value: store.money(c.value))
+        }
+    }
+
+    private func showMonthsDetail() {
+        Haptics.tap()
+        detailTitle = "近 6 个月 · 逐月明细"
+        let months = store.monthlySeries(months: 6)
+        detailRows = months.map { m in
+            ChartDetailRow(label: m.label, value: "支出 " + store.money(m.expense) + " · 收入 " + store.money(m.income))
+        }
     }
 
     private var titleRow: some View {
@@ -483,6 +567,8 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity)
         .glassPanel(Radius.card, strong: true)
+        .auraBorder(cornerRadius: Radius.card)
+        .tiltAndSheen(cornerRadius: Radius.card)
     }
 
     private var trendCard: some View {
@@ -494,6 +580,10 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+        .tiltAndSheen(cornerRadius: Radius.card)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .onTapGesture { showTrendDetail() }
+        .onLongPressGesture { showTrendDetail() }
     }
 
     private var categoryCard: some View {
@@ -519,6 +609,10 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+        .tiltAndSheen(cornerRadius: Radius.card)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .onTapGesture { showCategoryDetail() }
+        .onLongPressGesture { showCategoryDetail() }
     }
 
     private var monthsCard: some View {
@@ -529,6 +623,10 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+        .tiltAndSheen(cornerRadius: Radius.card)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .onTapGesture { showMonthsDetail() }
+        .onLongPressGesture { showMonthsDetail() }
     }
 
     private var metricsGrid: some View {

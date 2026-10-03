@@ -444,6 +444,8 @@ struct HomePage: View {
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .liquidGlass(.regular.tint(Palette.glassTint), in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .auraBorder(cornerRadius: Radius.hero)
+        .tiltAndSheen(cornerRadius: Radius.hero)
     }
 
     private var heroTop: some View {
@@ -567,8 +569,9 @@ struct HomePage: View {
             } else {
                 GlassEffectContainer(spacing: 10) {
                     VStack(spacing: 10) {
-                        ForEach(store.todayTxs) { tx in
+                        ForEach(Array(store.todayTxs.enumerated()), id: \.element.id) { index, tx in
                             TxRow(tx: tx, namespace: namespace) { actions.open(tx) }
+                                .staggeredSlideIn(index: index)
                         }
                     }
                 }
@@ -668,7 +671,7 @@ struct TxRow: View {
             .padding(13)
             .contentShape(RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .springButton(cornerRadius: Radius.tile)
         .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         .glassEffectID(tx.id, in: namespace)
         .glassEffectUnion(id: "txRow", namespace: namespace)
