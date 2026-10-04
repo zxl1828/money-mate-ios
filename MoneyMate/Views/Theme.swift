@@ -183,6 +183,7 @@ struct ClearLiquidGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
+            .clipShape(shape) // 严格裁剪内层子内容，彻底杜绝内容四角直角溢出
             .background {
                 shape
                     .fill(.ultraThinMaterial)
@@ -202,6 +203,7 @@ struct ClearLiquidGlassModifier: ViewModifier {
                         )
                     )
             }
+            .clipShape(shape) // 严格绑定连续曲率裁剪规则，杜绝材质图层溢出直角线框
             .overlay {
                 // 1pt Specular Rim 多段线性渐变高光边框模拟顶光折射
                 shape
@@ -228,20 +230,14 @@ struct ClearLiquidGlassModifier: ViewModifier {
                     )
                     .allowsHitTesting(false)
             }
-            // 立体投影：底层深景深柔和软阴影 + 表层小半径紫晶环境光晕
+            // 离屏渲染与阴影合并：精简卡片四周弥散投影，合并为一层柔和紫晶阴影，彻底根治卡顿掉帧
             .shadow(
                 color: colorScheme == .dark
-                    ? Color.black.opacity(0.45)
-                    : Color(red: 0.30, green: 0.20, blue: 0.45).opacity(0.12),
-                radius: 18,
+                    ? Color.black.opacity(0.36)
+                    : Color(red: 0.30, green: 0.20, blue: 0.45).opacity(0.08),
+                radius: 12,
                 x: 0,
-                y: 8
-            )
-            .shadow(
-                color: Palette.neonViolet.opacity(colorScheme == .dark ? 0.22 : 0.08),
-                radius: 8,
-                x: 0,
-                y: 2
+                y: 6
             )
     }
 }
@@ -584,21 +580,15 @@ struct GlowDoubleRing: View {
 
 // MARK: - 紫晶呼吸弥散背光
 struct PurpleBreathingBacklight: ViewModifier {
-    @State private var breathe = false
     var cornerRadius: CGFloat = Radius.card
 
     func body(content: Content) -> some View {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Palette.neonViolet.opacity(breathe ? 0.30 : 0.10))
-                    .blur(radius: breathe ? 26 : 14)
+                    .fill(Palette.neonViolet.opacity(0.14))
+                    .blur(radius: 18)
             )
-            .onAppear {
-                withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
-                    breathe = true
-                }
-            }
     }
 }
 
@@ -649,14 +639,19 @@ extension View {
     }
 }
 
-// MARK: - 8. 旋转渐变描边与呼吸弥散背光
+// MARK: - 8. 旋转渐变描边与纯净单色系极光紫白流光
 struct AuraBorderModifier: ViewModifier {
     var cornerRadius: CGFloat = Radius.card
     var borderWidth: CGFloat = 1.6
-    var colors: [Color] = [Palette.primary, Palette.lilac, Palette.rose, Palette.mint, Palette.primary]
+    var colors: [Color] = [
+        Palette.auroraPurple.opacity(0.18),
+        Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.40), // 半透明浅紫罗兰 #C084FC 40%
+        Color.white.opacity(0.95),                                 // 纯白瞬态折射高光 #FFFFFF 95%
+        Palette.neonViolet,                                       // 霓虹极光紫 #A855F7
+        Palette.auroraPurple.opacity(0.18)
+    ]
 
     @State private var rotation: Double = 0
-    @State private var breathing: Bool = false
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -676,18 +671,13 @@ struct AuraBorderModifier: ViewModifier {
             }
             .background {
                 shape
-                    .fill(colors.first ?? Palette.primary)
-                    .opacity(breathing ? 0.32 : 0.14)
-                    .blur(radius: breathing ? 28 : 18)
-                    .scaleEffect(breathing ? 1.03 : 0.98)
+                    .fill(Palette.neonViolet.opacity(0.12))
+                    .blur(radius: 16)
                     .allowsHitTesting(false)
             }
             .onAppear {
-                withAnimation(.linear(duration: 5.0).repeatForever(autoreverses: false)) {
+                withAnimation(.easeInOut(duration: 4.8).repeatForever(autoreverses: false)) {
                     rotation = 360
-                }
-                withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
-                    breathing = true
                 }
             }
     }

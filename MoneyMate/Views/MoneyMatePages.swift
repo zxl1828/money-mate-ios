@@ -712,7 +712,6 @@ struct TrendChart: View {
     var onSelect: ((StatsPoint?) -> Void)? = nil
 
     @State private var selectedDate: String? = nil
-    @State private var breathe = false
 
     private var maxExpense: Double {
         points.map(\.expense).max() ?? 0
@@ -749,18 +748,18 @@ struct TrendChart: View {
                     .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
 
-                // 发光数据节点：双层同心圆结构，中心纯白实体高光核，外层扩散霓虹紫呼吸光晕
+                // 发光数据节点：双层同心圆结构，中心纯白实体高光核，静态霓虹紫晕，彻底消除持续重绘
                 if point.expense == maxExpense && maxExpense > 0 {
                     PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                        .symbolSize(breathe ? 72 : 54)
-                        .foregroundStyle(Palette.neonViolet.opacity(breathe ? 0.50 : 0.30))
+                        .symbolSize(56)
+                        .foregroundStyle(Palette.neonViolet.opacity(0.45))
 
                     PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                        .symbolSize(18)
+                        .symbolSize(16)
                         .foregroundStyle(Color.white)
                 } else if points.count <= 7 {
                     PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                        .symbolSize(28)
+                        .symbolSize(26)
                         .foregroundStyle(Palette.neonViolet.opacity(0.35))
 
                     PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
@@ -832,11 +831,7 @@ struct TrendChart: View {
             }
         }
         .frame(height: 190)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
-                breathe = true
-            }
-        }
+        .drawingGroup() // 渲染隔离与离屏光栅化，杜绝页面滚动时的丢帧卡顿
     }
 }
 
@@ -996,6 +991,7 @@ struct SettingsPage: View {
     @State private var confirmClear = false
     @State private var showExport = false
     @State private var showImport = false
+    @State private var showNetWorth = false
     @State private var showCategoryBudget = false
     @State private var showCalendar = false
     @State private var showCategories = false
@@ -1008,6 +1004,7 @@ struct SettingsPage: View {
         ScrollView {
             VStack(spacing: 16) {
                 profileCard
+                assetCard
                 budgetCard
                 prefsCard
                 reminderCard
@@ -1038,6 +1035,9 @@ struct SettingsPage: View {
         }
         .fileImporter(isPresented: $showImport, allowedContentTypes: [.json]) { result in
             handleImport(result)
+        }
+        .sheet(isPresented: $showNetWorth) {
+            NetWorthPage(store: store)
         }
         .sheet(isPresented: $showCategoryBudget) {
             CategoryBudgetSheet(store: store)
@@ -1108,6 +1108,49 @@ struct SettingsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+    }
+
+    private var assetCard: some View {
+        Button {
+            showNetWorth = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Palette.auroraPurple, Palette.primaryDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                        .shadow(color: Palette.neonViolet.opacity(0.35), radius: 6)
+
+                    Image(systemName: "banknote.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("资产管理与净资产")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.textPrimary)
+                    Text("净资产 " + store.money(store.netWorth) + " · " + String(store.activeAccounts.count) + " 个活跃账户")
+                        .font(.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Palette.textTertiary)
+            }
+            .padding(16)
+            .clearLiquidGlass(cornerRadius: Radius.tile)
+        }
+        .buttonStyle(GelPressButtonStyle(cornerRadius: Radius.tile))
     }
 
     private var budgetCard: some View {

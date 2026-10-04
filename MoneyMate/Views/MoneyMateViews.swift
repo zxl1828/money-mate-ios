@@ -314,14 +314,33 @@ struct ContentView: View {
     }
 
     private var tabBar: some View {
-        HStack(spacing: 4) {
-            ForEach(MoneyTab.allCases) { item in
-                TabItem(tab: item, isSelected: tab == item, namespace: glassNS) {
-                    select(item)
-                }
+        HStack(spacing: 0) {
+            TabItem(tab: .home, isSelected: tab == .home, namespace: glassNS) {
+                select(.home)
             }
+            .frame(maxWidth: .infinity)
+
+            TabItem(tab: .list, isSelected: tab == .list, namespace: glassNS) {
+                select(.list)
+            }
+            .frame(maxWidth: .infinity)
+
+            // 中央预留 58pt 独立镂空槽位专供悬浮菱形加号 (FAB)，彻底杜绝压盖
+            Color.clear
+                .frame(width: 58, height: 44)
+                .allowsHitTesting(false)
+
+            TabItem(tab: .stats, isSelected: tab == .stats, namespace: glassNS) {
+                select(.stats)
+            }
+            .frame(maxWidth: .infinity)
+
+            TabItem(tab: .settings, isSelected: tab == .settings, namespace: glassNS) {
+                select(.settings)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .clearLiquidGlass(cornerRadius: 36)
         .padding(.horizontal, 16)
@@ -369,6 +388,7 @@ struct HomePage: View {
     @ObservedObject var store: MoneyStore
     var namespace: Namespace.ID
     var actions: HomeActions
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
@@ -429,28 +449,46 @@ struct HomePage: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(
-                            LinearGradient(
-                                colors: [Palette.auroraPurple.opacity(0.35), Palette.amethystDeep],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            colorScheme == .dark
+                                ? LinearGradient(
+                                    colors: [Palette.auroraPurple.opacity(0.35), Palette.amethystDeep],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [Color.white.opacity(0.88), Color(red: 0.94, green: 0.91, blue: 0.98).opacity(0.85)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .strokeBorder(
-                                    LinearGradient(
-                                        colors: [Color.white.opacity(0.7), Palette.neonViolet.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
+                                    colorScheme == .dark
+                                        ? LinearGradient(
+                                            colors: [Color.white.opacity(0.7), Palette.neonViolet.opacity(0.3)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                        : LinearGradient(
+                                            colors: [Color.white.opacity(0.95), Palette.primarySoft.opacity(0.45)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
                                     lineWidth: 1.0
                                 )
                         )
-                        .shadow(color: Palette.neonViolet.opacity(0.25), radius: 10, y: 3)
+                        .shadow(
+                            color: colorScheme == .dark
+                                ? Palette.neonViolet.opacity(0.25)
+                                : Color(red: 0.40, green: 0.20, blue: 0.60).opacity(0.12),
+                            radius: colorScheme == .dark ? 10 : 8,
+                            y: 3
+                        )
 
                     Image(systemName: "calendar")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Palette.textPrimary)
+                        .foregroundStyle(colorScheme == .dark ? Palette.textPrimary : Palette.primaryDeep)
                 }
                 .frame(width: 48, height: 48)
             }
