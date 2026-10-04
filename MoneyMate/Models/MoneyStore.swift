@@ -404,8 +404,9 @@ final class MoneyStore: ObservableObject {
         isAmountMasked.toggle()
         UserDefaults.standard.set(isAmountMasked, forKey: "moneymate.privacy.masked")
         PrivacyState.shared.isMasked = isAmountMasked
-        Haptics.medium()
+        Haptics.tap()
     }
+
     @Published var appearance: AppearanceMode { didSet { persist() } }
     @Published var dailyReminder: Bool { didSet { persist() } }
     @Published var dailyReminderHour: Int { didSet { persist() } }

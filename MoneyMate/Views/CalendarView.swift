@@ -311,8 +311,9 @@ struct CalendarView: View {
     private var liquidBalance: Double {
         store.activeAccounts
             .filter { !$0.isCredit }
-            .reduce(0.0) { $0 + store.balance(of: $1) }
+            .reduce(0.0) { $0 + store.balance(of: $1.id) }
     }
+
 
     private var futureSchedule: [CashFlowScheduleItem] {
         var items: [CashFlowScheduleItem] = []
@@ -356,8 +357,9 @@ struct CalendarView: View {
             // 信用卡到期还款
             for acc in store.activeAccounts where acc.isCredit {
                 if acc.dueDay > 0 && acc.dueDay == targetDay {
-                    let balance = store.balance(of: acc)
+                    let balance = store.balance(of: acc.id)
                     if balance < 0 {
+
                         let debt = abs(balance)
                         items.append(CashFlowScheduleItem(
                             date: targetDate,
@@ -425,11 +427,11 @@ struct CalendarView: View {
             HStack {
                 Label("未来 30 天流动性预测", systemImage: "shield.lefthalf.filled")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
-                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amber : Palette.mint))
+                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amberGlow : Palette.mint))
                 Spacer()
                 Text(isCritical ? "⚠️ 预警：资金有透支风险" : (isWarning ? "⚡️ 关注：余额将低于千元" : "✅ 资金水位健康"))
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amber : Palette.mint))
+                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amberGlow : Palette.mint))
             }
 
             HStack(spacing: 12) {
@@ -459,7 +461,7 @@ struct CalendarView: View {
             if let low = lowestPoint, low.isLow {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Palette.amber)
+                        .foregroundStyle(Palette.amberGlow)
                     Text("预计 \(low.dateLabel) 触及最低水位：\(store.money(low.balance))，请留意")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Palette.textPrimary)
@@ -467,7 +469,7 @@ struct CalendarView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Palette.amberGlow.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
         .padding(18)
@@ -495,7 +497,7 @@ struct CalendarView: View {
                             RoundedRectangle(cornerRadius: 3, style: .continuous)
                                 .fill(
                                     p.balance < 0 ? Palette.rose :
-                                    (p.balance < 1000 ? Palette.amber : Palette.primary)
+                                    (p.balance < 1000 ? Palette.amberGlow : Palette.primary)
                                 )
                                 .frame(width: 8, height: barHeight)
 

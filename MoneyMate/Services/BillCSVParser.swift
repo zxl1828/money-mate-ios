@@ -18,11 +18,12 @@ struct ParsedBillItem: Identifiable, Hashable {
 
 struct BillParseResult {
     let platform: String
-    let items: [ParsedBillItem]
+    var items: [ParsedBillItem]
     let totalExpense: Double
     let totalIncome: Double
     let duplicateCount: Int
 }
+
 
 enum BillCSVParser {
     /// 尝试以 UTF-8 或 GB18030/GBK 格式解码二进制数据

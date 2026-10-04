@@ -111,7 +111,8 @@ final class PrivacyState: ObservableObject {
 
     func toggleMask() {
         isMasked.toggle()
-        Haptics.medium()
+        Haptics.tap()
     }
+
 }
 

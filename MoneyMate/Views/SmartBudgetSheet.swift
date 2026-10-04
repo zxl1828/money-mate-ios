@@ -54,10 +54,11 @@ struct SmartBudgetSheet: View {
     private func calculate() {
         let rep = SmartBudgetEngine.generateReport(
             txs: store.txs,
-            irregularCategories: store.irregularCategories,
+            irregularCategories: Set(store.irregularCategories),
             recurringRules: store.recurringRules,
             currentBudget: store.budget
         )
+
         report = rep
         adjustedBudget = rep.recommendedBudget
     }

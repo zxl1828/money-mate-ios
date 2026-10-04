@@ -191,29 +191,7 @@ struct BillImportSheet: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(store.activeAccounts) { acc in
-                        Button {
-                            selectedAccountID = acc.id
-                            Haptics.select()
-                        } label: {
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(acc.kind.color)
-                                    .frame(width: 8, height: 8)
-                                Text(acc.name)
-                                    .font(.system(.footnote, design: .rounded).weight(.semibold))
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                selectedAccountID == acc.id ? Palette.primary.opacity(0.22) : Color.white.opacity(0.06),
-                                in: Capsule()
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(selectedAccountID == acc.id ? Palette.primary : Color.clear, lineWidth: 1.2)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        accountChip(acc)
                     }
                 }
             }
@@ -221,6 +199,34 @@ struct BillImportSheet: View {
         .padding(16)
         .clearLiquidGlass(cornerRadius: Radius.card)
     }
+
+    private func accountChip(_ acc: Account) -> some View {
+        let isSelected = (selectedAccountID == acc.id)
+        return Button {
+            selectedAccountID = acc.id
+            Haptics.select()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: acc.icon)
+                    .font(.system(size: 11))
+                Text(acc.name)
+                    .font(.system(.footnote, design: .rounded).weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? Palette.primary : Palette.textPrimary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ? Palette.primary.opacity(0.22) : Color.white.opacity(0.06),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? Palette.primary : Color.clear, lineWidth: 1.2)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
 
     // MARK: - 明细列表
     private func itemsListCard(_ res: BillParseResult) -> some View {
