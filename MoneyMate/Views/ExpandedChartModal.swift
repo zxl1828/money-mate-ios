@@ -364,7 +364,7 @@ struct ExpandedChartModal: View {
             // 环形外围数据药丸卡片
             HStack(spacing: 12) {
                 glassIndicatorPill(title: "总预算", value: store.money(store.budget), color: Palette.primary)
-                glassIndicatorPill(title: "已支出", value: store.money(store.currentMonthExpense), color: Palette.rose)
+                glassIndicatorPill(title: "已支出", value: store.money(store.expense), color: Palette.rose)
                 glassIndicatorPill(title: "可用结余", value: store.money(store.budgetLeft), color: Palette.mint)
             }
         }
@@ -460,7 +460,8 @@ struct ExpandedChartModal: View {
     // MARK: - 展开近 6 个月收支视窗
     private var expandedMonthsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            MonthsChart(points: monthlyPoints, height: 220)
+            MonthsChart(points: monthlyPoints)
+                .frame(height: 220)
                 .padding(.vertical, 8)
         }
     }
@@ -505,7 +506,7 @@ struct ExpandedChartModal: View {
                     let totalExp = monthlyPoints.reduce(0.0) { $0 + $1.expense }
                     let totalInc = monthlyPoints.reduce(0.0) { $0 + $1.income }
                     metricCard(title: "半年总支出", value: store.money(totalExp), icon: "arrow.up.right", tint: Palette.rose)
-                    metricCard(title: "半年总收入", value: store.money(totalInc), icon: "arrow.down.left", tint: Palette.income)
+                    metricCard(title: "半年总收入", value: store.money(totalInc), icon: "arrow.down.left", tint: Palette.mint)
                     metricCard(title: "半年净结余", value: store.money(totalInc - totalExp), icon: "wallet.pass.fill", tint: Palette.mint)
                     metricCard(title: "月均消耗", value: store.money(totalExp / Double(max(monthlyPoints.count, 1))), icon: "calendar.badge.clock", tint: Palette.primary)
                 }
