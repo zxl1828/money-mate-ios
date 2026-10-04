@@ -1167,7 +1167,7 @@ struct SettingsPage: View {
 
     private var assetCard: some View {
         AssetOverviewCard(
-            netWorth: store.netWorth,
+            netWorth: store.netWorthValue,
             accountCount: store.activeAccounts.count,
             money: { store.money($0) },
             onTap: { showNetWorth = true }
