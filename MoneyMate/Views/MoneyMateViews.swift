@@ -389,6 +389,7 @@ struct HomePage: View {
     var namespace: Namespace.ID
     var actions: HomeActions
     @Environment(\.colorScheme) private var colorScheme
+    @State private var expandedChart: ExpandedChartType? = nil
 
     var body: some View {
         ScrollView {
@@ -419,6 +420,14 @@ struct HomePage: View {
             .padding(.bottom, 220)
         }
         .scrollIndicators(.hidden)
+        .sheet(item: $expandedChart) { chartType in
+            ExpandedChartModal(
+                type: chartType,
+                range: .week,
+                store: store,
+                onDismiss: { expandedChart = nil }
+            )
+        }
     }
 
     private var mood: MascotMood {
@@ -595,6 +604,11 @@ struct HomePage: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
         .clearLiquidGlass(cornerRadius: 24)
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .budget
+        }
     }
 
     private var heroChips: some View {
@@ -656,7 +670,10 @@ struct HomePage: View {
                         .foregroundStyle(Palette.amberGlow)
                 }
                 Spacer()
-                Button(action: actions.openList) {
+                Button {
+                    Haptics.tap()
+                    expandedChart = .trend
+                } label: {
                     Text("看明细")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(Palette.textSecondary)
@@ -676,6 +693,11 @@ struct HomePage: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .clearLiquidGlass(cornerRadius: 28)
         .purpleBreathingBacklight(cornerRadius: 28)
+        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .trend
+        }
     }
 
     // MARK: 快捷模板
@@ -798,25 +820,14 @@ struct BudgetRing: View {
     var label: String
 
     var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.5), lineWidth: size * 0.13)
-            Circle()
-                .trim(from: 0, to: max(min(progress, 1), 0.02))
-                .stroke(AngularGradient(colors: [Palette.mint, Palette.primarySoft, Palette.primary, Palette.rose],
-                                        center: .center),
-                        style: StrokeStyle(lineWidth: size * 0.13, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            VStack(spacing: -2) {
-                Text(label)
-                    .font(.system(size: size * 0.26, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.ink)
-                Text("已用")
-                    .font(.system(size: size * 0.16, design: .rounded))
-                    .foregroundStyle(Palette.textSecondary)
-            }
-        }
-        .frame(width: size, height: size)
+        ToroidalGemRing(
+            progress: progress,
+            size: size,
+            percentText: label,
+            label: "已用",
+            showOuterGlow: false,
+            showCenterWell: true
+        )
     }
 }
 

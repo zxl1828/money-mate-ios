@@ -525,58 +525,196 @@ struct AmberHalo: View {
     }
 }
 
-// MARK: - 6. 双层紫晶发光环形进度仪表盘 (GlowDoubleRing)
+// MARK: - 6. 四层复合立体紫晶导管与凹槽环形进度仪表盘 (ToroidalGemRing / GlowDoubleRing)
+
+struct ToroidalGemRing: View {
+    var progress: Double
+    var size: CGFloat = 88
+    var percentText: String? = nil
+    var label: String = "已使用"
+    var showOuterGlow: Bool = true
+    var showCenterWell: Bool = true
+
+    var body: some View {
+        let clampedP = max(0.0, min(progress, 1.0))
+        let displayP = max(0.015, clampedP)
+        let pct = Int((clampedP * 100).rounded())
+        let strokeW = max(size * 0.125, 4.0)
+        let radius = max((size - strokeW) / 2 - 2, 2.0)
+        let center = CGPoint(x: size / 2, y: size / 2)
+
+        // 终点发光微晶珠子坐标计算
+        let endAngle = displayP * 2 * .pi - .pi / 2
+        let beadX = center.x + radius * cos(endAngle)
+        let beadY = center.y + radius * sin(endAngle)
+
+        ZStack {
+            // 0. 外层弥散呼吸背光
+            if showOuterGlow {
+                Circle()
+                    .fill(Palette.neonViolet.opacity(0.32))
+                    .frame(width: size * 0.88, height: size * 0.88)
+                    .blur(radius: max(size * 0.12, 6))
+            }
+
+            // 1. 环形凹槽导轨底座 (Recessed Track Well)
+            // 物理向内凹陷的深曜黑紫基座槽
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
+                            Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: strokeW
+                )
+                .frame(width: radius * 2, height: radius * 2)
+
+            // 槽内双轨倒角高光边框 (模拟机械加工/水晶雕刻出的滑轨边缘)
+            Circle()
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .frame(width: (radius + strokeW / 2) * 2, height: (radius + strokeW / 2) * 2)
+
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .frame(width: max((radius - strokeW / 2) * 2, 2), height: max((radius - strokeW / 2) * 2, 2))
+
+            // 凹槽内部深景深微阴影 (呈现深深凹陷质感)
+            Circle()
+                .stroke(Color.black.opacity(0.48), lineWidth: max(strokeW * 0.28, 1))
+                .frame(width: radius * 2, height: radius * 2)
+
+            // 2. 微凹透镜内芯 (Concave Glass Well)
+            if showCenterWell && (radius - strokeW / 2) > 6 {
+                let innerDiameter = max((radius - strokeW / 2 - 1) * 2, 4)
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.85),
+                                Color(red: 0.16, green: 0.10, blue: 0.28).opacity(0.35)
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: radius - strokeW / 2
+                        )
+                    )
+                    .frame(width: innerDiameter, height: innerDiameter)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.15), Color.clear],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+            }
+
+            // 3. 立体晶石流光环体 (3D Toroidal Gem Ring)
+            // 管状流光多段渐变主导轨
+            Circle()
+                .trim(from: 0, to: CGFloat(displayP))
+                .stroke(
+                    AngularGradient(
+                        colors: [
+                            Palette.auroraPurple,
+                            Palette.neonViolet,
+                            Color(red: 0.76, green: 0.53, blue: 0.99),
+                            Color(red: 0.22, green: 0.74, blue: 0.97),
+                            Palette.auroraPurple
+                        ],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: strokeW, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: radius * 2, height: radius * 2)
+
+            // 圆柱管体表面圆弧反光高光 (Specular Highlight Stroke)
+            Circle()
+                .trim(from: 0, to: CGFloat(displayP))
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.85),
+                            Color(red: 0.85, green: 0.72, blue: 1.0).opacity(0.55),
+                            Color.white.opacity(0.3)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    style: StrokeStyle(lineWidth: max(strokeW * 0.30, 1.2), lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: radius * 2, height: radius * 2)
+
+            // 4. 端点发光微晶圆珠 (Glowing Gem Bead)
+            if displayP > 0.02 {
+                // 外层发光晕
+                Circle()
+                    .fill(Palette.neonViolet.opacity(0.65))
+                    .frame(width: strokeW * 1.5, height: strokeW * 1.5)
+                    .blur(radius: 3)
+                    .position(x: beadX, y: beadY)
+
+                // 微晶圆珠球体核心
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.white, Palette.neonViolet],
+                            center: .center,
+                            startRadius: 1,
+                            endRadius: max(strokeW * 0.6, 2)
+                        )
+                    )
+                    .frame(width: strokeW * 0.95, height: strokeW * 0.95)
+                    .position(x: beadX, y: beadY)
+
+                // 晶体切面高光点
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: max(strokeW * 0.35, 1.5), height: max(strokeW * 0.35, 1.5))
+                    .position(x: beadX - 1, y: beadY - 1)
+            }
+
+            // 5. 居中高对比度层级文字排版
+            VStack(spacing: 1) {
+                Text(percentText ?? "\(pct)%")
+                    .font(.system(size: size * 0.22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.white)
+                    .contentTransition(.numericText())
+                Text(label)
+                    .font(.system(size: size * 0.12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.98))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 struct GlowDoubleRing: View {
     var progress: Double
     var size: CGFloat = 88
     var label: String = "已使用"
 
     var body: some View {
-        let pct = Int((progress * 100).rounded())
-        ZStack {
-            Circle()
-                .fill(Palette.neonViolet.opacity(0.35))
-                .frame(width: size * 0.9, height: size * 0.9)
-                .blur(radius: 12)
-
-            Circle()
-                .stroke(Color(red: 0.23, green: 0.12, blue: 0.39).opacity(0.6), lineWidth: 6)
-                .frame(width: size * 0.88, height: size * 0.88)
-
-            Circle()
-                .trim(from: 0, to: max(0.02, CGFloat(min(progress, 1.0))))
-                .stroke(
-                    AngularGradient(
-                        colors: [Palette.auroraPurple, Palette.neonViolet, Color(red: 0.75, green: 0.52, blue: 0.99), Color(red: 0.22, green: 0.74, blue: 0.97), Palette.auroraPurple],
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: 6.5, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .frame(width: size * 0.88, height: size * 0.88)
-
-            Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
-                .frame(width: size * 0.70, height: size * 0.70)
-
-            Circle()
-                .trim(from: 0, to: max(0.04, CGFloat(min(progress * 0.7, 0.7))))
-                .stroke(Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.75), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .frame(width: size * 0.70, height: size * 0.70)
-
-            VStack(spacing: 1) {
-                Text("\(pct)%")
-                    .font(.system(size: size * 0.22, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.textPrimary)
-                Text(label)
-                    .font(.system(size: size * 0.12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Palette.textSecondary)
-            }
-        }
-        .frame(width: size, height: size)
+        ToroidalGemRing(
+            progress: progress,
+            size: size,
+            percentText: nil,
+            label: label,
+            showOuterGlow: true,
+            showCenterWell: true
+        )
     }
 }
+
 
 // MARK: - 紫晶呼吸弥散背光
 struct PurpleBreathingBacklight: ViewModifier {

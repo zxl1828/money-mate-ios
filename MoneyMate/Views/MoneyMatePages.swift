@@ -441,8 +441,7 @@ struct StatsPage: View {
     var namespace: Namespace.ID
 
     @State private var range: StatsRange = .week
-    @State private var detailTitle: String? = nil
-    @State private var detailRows: [ChartDetailRow] = []
+    @State private var expandedChart: ExpandedChartType? = nil
     @State private var hoveredPoint: StatsPoint? = nil
 
     var body: some View {
@@ -466,41 +465,13 @@ struct StatsPage: View {
         }
         .scrollIndicators(.hidden)
         .animation(.spring(response: 0.24, dampingFraction: 0.92), value: range)
-        .sheet(isPresented: Binding(
-            get: { detailTitle != nil },
-            set: { if !$0 { detailTitle = nil } }
-        )) {
-            if let title = detailTitle {
-                ChartDetailSheet(title: title, rows: detailRows)
-            }
-        }
-    }
-
-    private func showTrendDetail() {
-        Haptics.tap()
-        detailTitle = "支出趋势 · 逐项明细"
-        detailRows = points.map { p in
-            ChartDetailRow(label: p.label, value: "支出 " + store.money(p.expense) + " · 收入 " + store.money(p.income))
-        }
-    }
-
-    private func showCategoryDetail() {
-        Haptics.tap()
-        detailTitle = "分类占比 · 全部明细"
-        let cats = store.rangeCategories(range)
-        let total = max(store.rangeExpense(range), 1)
-        detailRows = cats.map { c in
-            let pct = Int((c.value / total) * 100)
-            return ChartDetailRow(label: c.label + "  " + String(pct) + "%", value: store.money(c.value))
-        }
-    }
-
-    private func showMonthsDetail() {
-        Haptics.tap()
-        detailTitle = "近 6 个月 · 逐月明细"
-        let months = store.monthlySeries(months: 6)
-        detailRows = months.map { m in
-            ChartDetailRow(label: m.label, value: "支出 " + store.money(m.expense) + " · 收入 " + store.money(m.income))
+        .sheet(item: $expandedChart) { chartType in
+            ExpandedChartModal(
+                type: chartType,
+                range: range,
+                store: store,
+                onDismiss: { expandedChart = nil }
+            )
         }
     }
 
@@ -572,6 +543,11 @@ struct StatsPage: View {
         .glassPanel(Radius.card, strong: true)
         .auraBorder(cornerRadius: Radius.card)
         .purpleBreathingBacklight(cornerRadius: Radius.card)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .budget
+        }
     }
 
     private var trendCard: some View {
@@ -603,8 +579,14 @@ struct StatsPage: View {
         .glassPanel(Radius.card, strong: true)
         .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .onTapGesture { showTrendDetail() }
-        .onLongPressGesture { showTrendDetail() }
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .trend
+        }
+        .onLongPressGesture {
+            Haptics.tap()
+            expandedChart = .trend
+        }
     }
 
     private var categoryCard: some View {
@@ -632,8 +614,14 @@ struct StatsPage: View {
         .glassPanel(Radius.card, strong: true)
         .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .onTapGesture { showCategoryDetail() }
-        .onLongPressGesture { showCategoryDetail() }
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .category
+        }
+        .onLongPressGesture {
+            Haptics.tap()
+            expandedChart = .category
+        }
     }
 
     private var monthsCard: some View {
@@ -646,8 +634,14 @@ struct StatsPage: View {
         .glassPanel(Radius.card, strong: true)
         .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .onTapGesture { showMonthsDetail() }
-        .onLongPressGesture { showMonthsDetail() }
+        .onTapGesture {
+            Haptics.tap()
+            expandedChart = .months
+        }
+        .onLongPressGesture {
+            Haptics.tap()
+            expandedChart = .months
+        }
     }
 
     private var metricsGrid: some View {
@@ -841,26 +835,104 @@ struct DonutChart: View {
     let items: [CategoryTotal]
     let total: Double
     let money: (Double) -> String
+    var selectedCategory: String? = nil
+    var onSelect: ((CategoryTotal?) -> Void)? = nil
 
     var body: some View {
+        let activeItem = items.first(where: { $0.label == selectedCategory })
         ZStack {
+            // 环形凹槽导轨底座 (Recessed Track Well)
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
+                            Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 32
+                )
+                .frame(width: 146, height: 146)
+                .overlay(
+                    Circle().stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .frame(width: 178, height: 178)
+                )
+
+            // 分类多扇区独立镶嵌彩色水晶切片 (2.5pt 物理间隙与倒角切面)
             Chart(items) { item in
-                SectorMark(angle: .value("金额", item.value), innerRadius: .ratio(0.64), angularInset: 2)
-                    .cornerRadius(6)
-                    .foregroundStyle(Palette.categoryColor(item.label))
+                let isSelected = item.label == selectedCategory
+                SectorMark(
+                    angle: .value("金额", item.value),
+                    innerRadius: .ratio(0.62),
+                    outerRadius: isSelected ? .ratio(1.05) : .ratio(1.0),
+                    angularInset: 2.5
+                )
+                .cornerRadius(5)
+                .foregroundStyle(Palette.categoryColor(item.label))
+                .opacity(selectedCategory == nil || isSelected ? 1.0 : 0.45)
             }
             .chartLegend(.hidden)
             .frame(height: 190)
 
+            // 微凹透镜内芯 (Concave Glass Well)
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.92),
+                            Color(red: 0.18, green: 0.11, blue: 0.32).opacity(0.40)
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 56
+                    )
+                )
+                .frame(width: 114, height: 114)
+                .overlay(
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.16), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(color: Palette.neonViolet.opacity(0.25), radius: 8)
+
+            // 居中高对比度层级文字 (联动选中)
             VStack(spacing: 2) {
-                Text("总支出").font(.caption2).foregroundStyle(Palette.textSecondary)
-                Text(money(total))
-                    .font(.system(.headline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Palette.ink)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
+                if let sel = activeItem {
+                    let pct = Int((sel.value / max(total, 1)) * 100)
+                    Text(sel.label)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.categoryColor(sel.label))
+                    Text(money(sel.value))
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                    Text("\(pct)%")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Palette.textSecondary)
+                } else {
+                    Text("总支出")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(Palette.textSecondary)
+                    Text(money(total))
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.white)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                    Text("全部分类")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Palette.textTertiary)
+                }
             }
-            .frame(width: 132)
+            .frame(width: 100)
         }
     }
 }
