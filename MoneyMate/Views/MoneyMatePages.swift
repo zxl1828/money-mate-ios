@@ -338,7 +338,7 @@ struct TransactionsPage: View {
                 VStack(spacing: 10) {
                     ForEach(Array(group.txs.enumerated()), id: \.element.id) { index, tx in
                         TxRow(tx: tx, namespace: namespace, showsTags: true) { onOpen(tx) }
-                            .staggeredSlideIn(index: index)
+                            .springCascade(index: index)
                             .contextMenu {
                                 Button {
                                     onOpen(tx)

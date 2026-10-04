@@ -312,6 +312,10 @@ extension View {
     func springCascade(index: Int, trigger: AnyHashable = 0) -> some View {
         self.modifier(SpringCascadeModifier(index: index, trigger: trigger))
     }
+
+    func staggeredSlideIn(index: Int) -> some View {
+        self.springCascade(index: index)
+    }
 }
 
 // MARK: - 2. 液体凝胶物理弹性按压样式 (GelPressButtonStyle)
