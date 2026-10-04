@@ -77,7 +77,7 @@ struct LedgerBar: View {
             if !ledger.isAll {
                 Text("只看这个账本")
                     .font(.caption2)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
             Button {
@@ -174,7 +174,7 @@ struct LedgerCenterSheet: View {
                     if let range = ledger.tripRanges[name] {
                         Text(range.replacingOccurrences(of: "|", with: " → "))
                             .font(.caption2)
-                            .foregroundStyle(Palette.ink.opacity(0.45))
+                            .foregroundStyle(Palette.textSecondary)
                     }
                     Spacer(minLength: 0)
                     Button {
@@ -220,7 +220,7 @@ struct LedgerCenterSheet: View {
                     .foregroundStyle(Palette.ink)
                 Text(detail)
                     .font(.caption2)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
         }

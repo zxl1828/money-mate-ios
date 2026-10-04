@@ -116,7 +116,7 @@ struct OCRReviewView: View {
                         .foregroundStyle(draft.wrappedValue.isIncome ? Palette.mint : Palette.rose)
                     Text("\u{00A5}")
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        .foregroundStyle(Palette.ink.opacity(0.5))
+                        .foregroundStyle(Palette.textSecondary)
                     TextField("0.00", text: amountText(draft))
                         .keyboardType(.decimalPad)
                         .font(.system(.headline, design: .rounded).weight(.bold))
@@ -161,7 +161,7 @@ struct OCRReviewView: View {
 
             Text(draft.wrappedValue.rawLine)
                 .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.45))
+                .foregroundStyle(Palette.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
         }

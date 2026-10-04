@@ -161,13 +161,13 @@ struct InsightPanel: View {
                 }
             }
             HStack {
-                Text("少").font(.caption2).foregroundStyle(Palette.ink.opacity(0.5))
+                Text("少").font(.caption2).foregroundStyle(Palette.textSecondary)
                 ForEach([0.15, 0.35, 0.6, 0.85, 1.0], id: \.self) { level in
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Palette.primary.opacity(0.12 + 0.85 * level))
                         .frame(width: 14, height: 12)
                 }
-                Text("多").font(.caption2).foregroundStyle(Palette.ink.opacity(0.5))
+                Text("多").font(.caption2).foregroundStyle(Palette.textSecondary)
                 Spacer()
                 Text("共 " + store.money(days.reduce(0) { $0 + $1.value }))
                     .font(.caption2)

@@ -172,7 +172,7 @@ struct TransactionsPage: View {
                     .foregroundStyle(Palette.ink)
                 Text("共 " + String(filtered.count) + " 笔 · " + monthLabel)
                     .font(.caption)
-                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
             Button {
@@ -216,7 +216,7 @@ struct TransactionsPage: View {
                 Button {
                     query = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.ink.opacity(0.35))
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -239,7 +239,7 @@ struct TransactionsPage: View {
                 } label: {
                     Text(item.rawValue)
                         .font(.system(.footnote, design: .rounded).weight(.semibold))
-                        .foregroundStyle(type == item ? Palette.primary : Palette.ink.opacity(0.6))
+                        .foregroundStyle(type == item ? Palette.primary : Palette.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                 }
@@ -251,7 +251,7 @@ struct TransactionsPage: View {
             } label: {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(onlyRecurring ? Palette.primary : Palette.ink.opacity(0.6))
+                    .foregroundStyle(onlyRecurring ? Palette.primary : Palette.textSecondary)
                     .frame(width: 42)
                     .padding(.vertical, 9)
             }
@@ -284,7 +284,7 @@ struct TransactionsPage: View {
                 }
                 Text(title).font(.system(.footnote, design: .rounded).weight(.semibold))
             }
-            .foregroundStyle(active ? Palette.primary : Palette.ink.opacity(0.6))
+            .foregroundStyle(active ? Palette.primary : Palette.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
@@ -448,15 +448,15 @@ struct StatsPage: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                titleRow
-                rangePicker
-                overviewCard
-                trendCard
-                categoryCard
-                monthsCard
-                metricsGrid
-                insightsCard
-                InsightPanel(store: store)
+                titleRow.springCascade(index: 0, trigger: range)
+                rangePicker.springCascade(index: 1, trigger: range)
+                overviewCard.springCascade(index: 2, trigger: range)
+                trendCard.springCascade(index: 3, trigger: range)
+                categoryCard.springCascade(index: 4, trigger: range)
+                monthsCard.springCascade(index: 5, trigger: range)
+                metricsGrid.springCascade(index: 6, trigger: range)
+                insightsCard.springCascade(index: 7, trigger: range)
+                InsightPanel(store: store).springCascade(index: 8, trigger: range)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -508,7 +508,7 @@ struct StatsPage: View {
                 Text("数据洞察")
                     .font(.system(.title2, design: .rounded).weight(.heavy))
                     .foregroundStyle(Palette.ink)
-                Text("小紫帮你把钱看明白").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                Text("小紫帮你把钱看明白").font(.caption).foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
             CoinBuddy(mood: MascotMood.forBudget(store.budgetRatio), size: 38)
@@ -524,7 +524,7 @@ struct StatsPage: View {
                 } label: {
                     Text(item.title)
                         .font(.system(.footnote, design: .rounded).weight(.semibold))
-                        .foregroundStyle(range == item ? Palette.primary : Palette.ink.opacity(0.6))
+                        .foregroundStyle(range == item ? Palette.primary : Palette.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                 }
@@ -543,7 +543,7 @@ struct StatsPage: View {
                            size: 78,
                            label: String(Int(store.budgetProgress * 100)) + "%")
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("本月结余").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                    Text("本月结余").font(.caption).foregroundStyle(Palette.textSecondary)
                     Text(store.money(store.balance))
                         .font(.system(size: 26, weight: .heavy, design: .rounded))
                         .foregroundStyle(Palette.ink)
@@ -587,7 +587,7 @@ struct StatsPage: View {
                     } else {
                         Text(range.title + " · 虚线为日均")
                             .font(.caption2)
-                            .foregroundStyle(Palette.ink.opacity(0.6))
+                            .foregroundStyle(Palette.textSecondary)
                     }
                 }
                 Spacer()
@@ -666,7 +666,7 @@ struct StatsPage: View {
                     Text("小紫的洞察")
                         .font(.system(.headline, design: .rounded).weight(.bold))
                         .foregroundStyle(Palette.ink)
-                    Text("根据你的账本自动生成").font(.caption2).foregroundStyle(Palette.ink.opacity(0.55))
+                    Text("根据你的账本自动生成").font(.caption2).foregroundStyle(Palette.textSecondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -712,39 +712,103 @@ struct TrendChart: View {
     var onSelect: ((StatsPoint?) -> Void)? = nil
 
     @State private var selectedDate: String? = nil
+    @State private var breathe = false
+
+    private var maxExpense: Double {
+        points.map(\.expense).max() ?? 0
+    }
 
     var body: some View {
         let selected = points.first(where: { $0.label == selectedDate })
         Chart {
             ForEach(points) { point in
+                // 面积流光渐变：纵向线性渐变，半透明紫光均匀衰减至底部完全透明
                 AreaMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                    .foregroundStyle(LinearGradient(colors: [Palette.neonViolet.opacity(0.42), Palette.neonViolet.opacity(0.02)],
-                                                    startPoint: .top, endPoint: .bottom))
+                    .foregroundStyle(
+                        LinearGradient(
+                            stops: [
+                                .init(color: Palette.neonViolet.opacity(0.35), location: 0.0),
+                                .init(color: Palette.auroraPurple.opacity(0.10), location: 0.55),
+                                .init(color: Color.clear, location: 1.0)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                     .interpolationMethod(.catmullRom)
+
+                // 平滑高光折线：2.5pt 粗细紫白渐变高光描边
                 LineMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                    .foregroundStyle(Palette.neonViolet)
-                    .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.white, Palette.neonViolet, Palette.auroraPurple],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
+
+                // 发光数据节点：双层同心圆结构，中心纯白实体高光核，外层扩散霓虹紫呼吸光晕
+                if point.expense == maxExpense && maxExpense > 0 {
+                    PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
+                        .symbolSize(breathe ? 72 : 54)
+                        .foregroundStyle(Palette.neonViolet.opacity(breathe ? 0.50 : 0.30))
+
+                    PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
+                        .symbolSize(18)
+                        .foregroundStyle(Color.white)
+                } else if points.count <= 7 {
+                    PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
+                        .symbolSize(28)
+                        .foregroundStyle(Palette.neonViolet.opacity(0.35))
+
+                    PointMark(x: .value("日期", point.label), y: .value("支出", point.expense))
+                        .symbolSize(10)
+                        .foregroundStyle(Color.white)
+                }
             }
+
+            // 基准日均参考线：高辨识度双色细虚线（琥珀金/紫霓虹）
             RuleMark(y: .value("日均", average))
-                .foregroundStyle(Palette.rose.opacity(0.8))
-                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Palette.amberGlow, Palette.amberWarm],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .lineStyle(StrokeStyle(lineWidth: 1.6, dash: [5, 4]))
+                .annotation(position: .top, alignment: .trailing) {
+                    Text("日均 ¥" + String(format: "%.0f", average))
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.amberGlow)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(.ultraThinMaterial, in: Capsule())
+                }
 
             if let sel = selected {
                 RuleMark(x: .value("日期", sel.label))
-                    .foregroundStyle(Palette.amberGlow.opacity(0.8))
-                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+                    .foregroundStyle(Palette.amberGlow.opacity(0.85))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+
                 PointMark(x: .value("日期", sel.label), y: .value("支出", sel.expense))
-                    .symbolSize(80)
-                    .foregroundStyle(Palette.amberGlow)
+                    .symbolSize(88)
+                    .foregroundStyle(Palette.amberGlow.opacity(0.35))
+
+                PointMark(x: .value("日期", sel.label), y: .value("支出", sel.expense))
+                    .symbolSize(22)
+                    .foregroundStyle(Color.white)
                     .annotation(position: .top) {
-                        Text("¥ " + String(format: "%.1f", sel.expense))
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Color(red: 0.12, green: 0.06, blue: 0.22), in: Capsule())
-                            .overlay(Capsule().stroke(Palette.amberGlow.opacity(0.6), lineWidth: 1))
+                        Text("¥ " + String(format: "%.2f", sel.expense))
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Palette.textPrimary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(Palette.amberGlow, lineWidth: 1.2))
+                            .shadow(color: Palette.amberGlow.opacity(0.4), radius: 6)
                     }
             }
         }
@@ -755,16 +819,24 @@ struct TrendChart: View {
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
-                AxisGridLine().foregroundStyle(Palette.ink.opacity(0.08))
-                AxisValueLabel().font(.system(size: 9, design: .rounded))
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.6, dash: [2, 4]))
+                    .foregroundStyle(Palette.textTertiary.opacity(0.18))
+                AxisValueLabel().font(.system(size: 9, design: .rounded)).foregroundStyle(Palette.textTertiary)
             }
         }
         .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                AxisValueLabel().font(.system(size: 9, design: .rounded))
+            AxisMarks(values: .automatic(desiredCount: min(points.count, 7))) { _ in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.6, dash: [2, 4]))
+                    .foregroundStyle(Palette.textTertiary.opacity(0.15))
+                AxisValueLabel().font(.system(size: 9, design: .rounded)).foregroundStyle(Palette.textTertiary)
             }
         }
         .frame(height: 190)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                breathe = true
+            }
+        }
     }
 }
 
@@ -784,7 +856,7 @@ struct DonutChart: View {
             .frame(height: 190)
 
             VStack(spacing: 2) {
-                Text("总支出").font(.caption2).foregroundStyle(Palette.ink.opacity(0.55))
+                Text("总支出").font(.caption2).foregroundStyle(Palette.textSecondary)
                 Text(money(total))
                     .font(.system(.headline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Palette.ink)
@@ -844,7 +916,7 @@ struct CategoryRow: View {
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(Palette.ink)
                 Text(String(Int(min(item.value / max(total, 1), 1) * 100)) + "%")
-                    .font(.caption2).foregroundStyle(Palette.ink.opacity(0.5))
+                    .font(.caption2).foregroundStyle(Palette.textSecondary)
                 Spacer()
                 Text(money)
                     .font(.system(.subheadline, design: .rounded).weight(.bold))
@@ -859,7 +931,7 @@ struct CategoryRow: View {
                         .frame(width: max(8, proxy.size.width * min(item.value / max(total, 1), 1)))
                     if budget > 0 {
                         Capsule()
-                            .fill(Palette.ink.opacity(0.45))
+                            .fill(Palette.textSecondary)
                             .frame(width: 2)
                             .offset(x: max(0, min(proxy.size.width - 2, proxy.size.width * min(budget / max(total, 1), 1))))
                     }
@@ -884,7 +956,7 @@ struct MetricTile: View {
                 .frame(width: 30, height: 30)
                 .background(LinearGradient(colors: [tint, tint.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing),
                             in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
-            Text(title).font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+            Text(title).font(.caption2).foregroundStyle(Palette.textSecondary)
             Text(value)
                 .font(.system(.subheadline, design: .rounded).weight(.bold))
                 .foregroundStyle(Palette.ink)
@@ -1025,7 +1097,7 @@ struct SettingsPage: View {
                     .foregroundStyle(Palette.ink)
                 Text("共 " + String(store.txs.count) + " 笔记录 · 本月记账 " + String(store.activeDays) + " 天")
                     .font(.caption)
-                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .foregroundStyle(Palette.textSecondary)
                 HStack(spacing: 6) {
                     TagChip(text: store.baseCurrency.rawValue)
                     TagChip(text: "离线优先")
@@ -1067,7 +1139,7 @@ struct SettingsPage: View {
             }
             // 非常规支出：标了就不参与预算建议（节日 / 婚礼 / 一次性大件）
             Text("非常规支出（不计入预算建议）")
-                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+                .font(.caption2).foregroundStyle(Palette.textSecondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(store.expenseCategories.map(\.name), id: \.self) { name in
@@ -1222,15 +1294,15 @@ struct SettingsPage: View {
             SectionHeader(title: "共享账本", subtitle: store.ledgerName + " \u{00B7} " + String(store.members.count) + " 人")
             Text("各自在自己手机上记，再用「共享包」合并成一本账；同一条记录以最后修改的为准，不会重复入账。")
                 .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.6))
+                .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
-                Text("账本名").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                Text("账本名").font(.caption).foregroundStyle(Palette.textSecondary)
                 TextField("账本名", text: $store.ledgerName)
                     .textFieldStyle(.plain)
                     .font(.system(.subheadline, design: .rounded))
                 Spacer(minLength: 0)
-                Text("我").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                Text("我").font(.caption).foregroundStyle(Palette.textSecondary)
                 TextField("称呼", text: $store.myName)
                     .textFieldStyle(.plain)
                     .font(.system(.subheadline, design: .rounded))
@@ -1258,7 +1330,7 @@ struct SettingsPage: View {
             toggleRow(title: "iCloud 同步（同账号多设备）", icon: "icloud.fill", isOn: $store.cloudSync)
             Text(cloud.status.text)
                 .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.6))
+                .foregroundStyle(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if store.cloudSync {
                 HStack(spacing: 10) {
@@ -1401,7 +1473,7 @@ struct CategoryBudgetSheet: View {
                 Text("给小猪分好口粮")
                     .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(Palette.ink)
-                Text("0 表示该分类不单独设限").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                Text("0 表示该分类不单独设限").font(.caption).foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
         }
@@ -1428,7 +1500,7 @@ struct CategoryBudgetSheet: View {
             Slider(value: binding(name), in: 0...10000, step: 100)
                 .tint(Palette.primary)
             Text("本月已花 " + store.money(store.categorySpent(name)))
-                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+                .font(.caption2).foregroundStyle(Palette.textSecondary)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)

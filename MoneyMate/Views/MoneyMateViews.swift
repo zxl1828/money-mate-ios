@@ -294,21 +294,21 @@ struct ContentView: View {
         }
     }
 
-    // MARK: 悬浮层
+    // MARK: 悬浮层（通透液态玻璃胶囊 Dock + 激活标签琥珀暖金微光 + 中央 3D 切面紫晶加号）
 
     private var floatingLayer: some View {
         VStack(spacing: 0) {
             Spacer()
             ZStack(alignment: .bottom) {
                 AmberHalo()
-                    .offset(y: -4)
+                    .offset(y: -2)
 
                 tabBar
 
                 DiamondJewelFab {
                     showAdd = true
                 }
-                .offset(y: -42)
+                .offset(y: -38)
             }
         }
     }
@@ -321,18 +321,9 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 36, style: .continuous)
-                .fill(Color(red: 0.08, green: 0.05, blue: 0.14).opacity(0.92))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 36, style: .continuous)
-                        .stroke(Palette.neonViolet.opacity(0.28), lineWidth: 1.1)
-                )
-                .shadow(color: .black.opacity(0.55), radius: 26, y: 10)
-                .shadow(color: Palette.neonViolet.opacity(0.18), radius: 18)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .clearLiquidGlass(cornerRadius: 36)
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
@@ -355,7 +346,7 @@ struct LockScreen: View {
                     .foregroundStyle(Palette.ink)
                 Text("用面容 / 指纹解锁你的账本")
                     .font(.caption)
-                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .foregroundStyle(Palette.textSecondary)
                 Button {
                     onUnlock()
                 } label: {
@@ -372,7 +363,7 @@ struct LockScreen: View {
     }
 }
 
-// MARK: - 首页
+// MARK: - 首页（通透液态玻璃 + 紫晶微拟物 + 列表元素交错弹性入场）
 
 struct HomePage: View {
     @ObservedObject var store: MoneyStore
@@ -383,12 +374,25 @@ struct HomePage: View {
         ScrollView {
             VStack(spacing: 18) {
                 header
+                    .springCascade(index: 0)
+
                 LedgerBar(store: store)
+                    .springCascade(index: 1)
+
                 heroCard
+                    .springCascade(index: 2)
+
                 quickActions
+                    .springCascade(index: 3)
+
                 trendCard
+                    .springCascade(index: 4)
+
                 quickTemplates
+                    .springCascade(index: 5)
+
                 todayList
+                    .springCascade(index: 6)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -407,11 +411,11 @@ struct HomePage: View {
                 .frame(width: 62, height: 62)
             VStack(alignment: .leading, spacing: 3) {
                 Text(greeting)
-                    .font(.system(.title3, design: .rounded).weight(.bold))
-                    .foregroundStyle(.white)
+                    .font(.system(.title3, design: .rounded).weight(.heavy))
+                    .foregroundStyle(Palette.textPrimary)
                 Text(greetingSub)
                     .font(.caption)
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.8))
+                    .foregroundStyle(Palette.textSecondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
@@ -426,24 +430,31 @@ struct HomePage: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [Color(red: 0.23, green: 0.11, blue: 0.40), Color(red: 0.14, green: 0.06, blue: 0.25)],
+                                colors: [Palette.auroraPurple.opacity(0.35), Palette.amethystDeep],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Palette.neonViolet.opacity(0.45), lineWidth: 1.1)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.7), Palette.neonViolet.opacity(0.3)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.0
+                                )
                         )
-                        .shadow(color: Palette.neonViolet.opacity(0.28), radius: 14, y: 4)
+                        .shadow(color: Palette.neonViolet.opacity(0.25), radius: 10, y: 3)
 
                     Image(systemName: "calendar")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.91, green: 0.84, blue: 1.0))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Palette.textPrimary)
                 }
                 .frame(width: 48, height: 48)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GelPressButtonStyle(cornerRadius: 16))
         }
     }
 
@@ -460,7 +471,7 @@ struct HomePage: View {
         "看看今天花了啥"
     }
 
-    // MARK: 结余主卡 (预算总览)
+    // MARK: 结余主卡 (预算总览) - 通透液态玻璃 + Specular Rim + 双层发光环
 
     private var heroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -470,49 +481,32 @@ struct HomePage: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.15, green: 0.08, blue: 0.28),
-                                Color(red: 0.09, green: 0.05, blue: 0.18),
-                                Color(red: 0.06, green: 0.03, blue: 0.13)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .stroke(Palette.neonViolet.opacity(0.35), lineWidth: 1.2)
-                )
-                .shadow(color: .black.opacity(0.6), radius: 28, y: 12)
-                .shadow(color: Palette.neonViolet.opacity(0.2), radius: 20)
-        )
+        .clearLiquidGlass(cornerRadius: 30)
         .purpleBreathingBacklight(cornerRadius: 30)
     }
 
     private var heroHeaderRow: some View {
         HStack {
             Text("预算总览")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.textPrimary)
             Spacer()
             Text("K")
                 .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0))
+                .foregroundStyle(Palette.textSecondary)
                 .frame(width: 26, height: 26)
-                .background(Color(red: 0.22, green: 0.11, blue: 0.38).opacity(0.8), in: Circle())
-                .overlay(Circle().stroke(Palette.neonViolet.opacity(0.4), lineWidth: 1))
+                .background(Palette.neonViolet.opacity(0.18), in: Circle())
+                .overlay(Circle().stroke(Palette.neonViolet.opacity(0.35), lineWidth: 1))
 
             Button(action: actions.budget) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0))
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(Palette.textSecondary)
                     .frame(width: 26, height: 26)
-                    .background(Color(red: 0.22, green: 0.11, blue: 0.38).opacity(0.8), in: Circle())
-                    .overlay(Circle().stroke(Palette.neonViolet.opacity(0.4), lineWidth: 1))
+                    .background(Palette.neonViolet.opacity(0.18), in: Circle())
+                    .overlay(Circle().stroke(Palette.neonViolet.opacity(0.35), lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GelPressButtonStyle(cornerRadius: 13))
         }
     }
 
@@ -523,15 +517,15 @@ struct HomePage: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(store.money(store.balance))
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text("本月预算 " + store.money(store.budget))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.8))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Palette.textSecondary)
                 Text("剩余额度 " + store.money(store.budgetLeft))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.8))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Palette.textSecondary)
             }
 
             Spacer(minLength: 4)
@@ -540,7 +534,7 @@ struct HomePage: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color(red: 0.58, green: 0.20, blue: 0.92), Color(red: 0.42, green: 0.13, blue: 0.66)],
+                            colors: [Palette.primarySoft, Palette.primaryDeep],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -548,29 +542,16 @@ struct HomePage: View {
                     .frame(width: 32, height: 32)
                     .overlay(
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 15, weight: .heavy))
                             .foregroundStyle(.white)
                     )
-                    .shadow(color: Palette.neonViolet.opacity(0.5), radius: 10)
+                    .shadow(color: Palette.neonViolet.opacity(0.4), radius: 8)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(GelPressButtonStyle(cornerRadius: 16))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.08), Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.05), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1.0)
-                )
-        )
+        .clearLiquidGlass(cornerRadius: 24)
     }
 
     private var heroChips: some View {
@@ -587,16 +568,16 @@ struct HomePage: View {
                 .frame(width: 26, height: 26)
                 .overlay(
                     Image(systemName: icon)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 12, weight: .heavy))
                         .foregroundStyle(color)
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.7))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(Palette.textSecondary)
                 Text(value)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -604,81 +585,53 @@ struct HomePage: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(red: 0.12, green: 0.06, blue: 0.21).opacity(0.8))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(color.opacity(0.35), lineWidth: 1.0)
-                )
+        .clearLiquidGlass(cornerRadius: 18)
+    }
+
+    // MARK: 四大金刚功能键（嵌套式晶石架构 + 液体凝胶回弹）
+
+    private var quickActions: some View {
+        QuickActionsKeypad(
+            onAdd: actions.add,
+            onScan: actions.scan,
+            onBudget: actions.budget,
+            onRecurring: actions.recurring
         )
     }
 
-    // MARK: 快捷操作
-
-    private var quickActions: some View {
-        HStack(spacing: 12) {
-            JewelTileButton(title: "记账", symbol: "square.and.pencil", action: actions.add)
-            Spacer()
-            JewelTileButton(title: "扫描", symbol: "camera.viewfinder", action: actions.scan)
-            Spacer()
-            JewelTileButton(title: "预算", symbol: "chart.pie", action: actions.budget)
-            Spacer()
-            JewelTileButton(title: "周期", symbol: "arrow.triangle.2.circlepath", action: actions.recurring)
-        }
-    }
-
-    // MARK: 支出趋势
+    // MARK: 支出趋势看板（平滑高光贝塞尔曲线 + 双层发光节点 + 面积流光渐变）
 
     private var trendCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("支出趋势")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Palette.textPrimary)
                     Text("当前数值: " + store.money(store.dailyAverage))
-                        .font(.system(size: 11, design: .rounded))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(Palette.amberGlow)
                 }
                 Spacer()
                 Button(action: actions.openList) {
                     Text("看明细")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.textSecondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Palette.neonViolet.opacity(0.18))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Palette.neonViolet.opacity(0.4), lineWidth: 0.8)
-                                )
-                        )
+                        .clearLiquidGlass(cornerRadius: 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(GelPressButtonStyle(cornerRadius: 12))
             }
-            MiniBarChart(points: store.last7Days())
+
+            TrendChart(
+                points: store.last7Days().map { StatsPoint(label: $0.label, expense: $0.value, income: 0) },
+                average: store.dailyAverage
+            )
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.14, green: 0.08, blue: 0.27),
-                                Color(red: 0.08, green: 0.04, blue: 0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Palette.neonViolet.opacity(0.3), lineWidth: 1.1)
-                )
-                .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
-        )
+        .clearLiquidGlass(cornerRadius: 28)
         .purpleBreathingBacklight(cornerRadius: 28)
     }
 
@@ -687,8 +640,8 @@ struct HomePage: View {
     private var quickTemplates: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("快捷模板")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.textPrimary)
 
             HStack(spacing: 10) {
                 quickTemplateCard(title: "早餐", amount: 12, symbol: "cup.and.saucer.fill", category: "餐饮")
@@ -718,36 +671,20 @@ struct HomePage: View {
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0))
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Palette.primary)
                 Text(title)
                     .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Palette.textPrimary)
                 Text("¥" + String(format: "%.0f", amount))
-                    .font(.system(size: 11, design: .rounded))
-                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.8))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Palette.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.10),
-                                    Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.08),
-                                    Color(red: 0.12, green: 0.06, blue: 0.21).opacity(0.6)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.16), lineWidth: 1.0)
-                    )
-                    .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
-            )
+            .clearLiquidGlass(cornerRadius: 20)
         }
-        .springButton(cornerRadius: 20)
+        .buttonStyle(GelPressButtonStyle(cornerRadius: 20))
     }
 
     // MARK: 今日明细
@@ -764,19 +701,12 @@ struct HomePage: View {
                         .padding(.vertical, 18)
                 }
                 .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
-                        .fill(Color(red: 0.12, green: 0.06, blue: 0.21).opacity(0.6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1.0)
-                        )
-                )
+                .clearLiquidGlass(cornerRadius: Radius.tile)
             } else {
                 VStack(spacing: 10) {
                     ForEach(Array(store.todayTxs.enumerated()), id: \.element.id) { index, tx in
                         TxRow(tx: tx, namespace: namespace) { actions.open(tx) }
-                            .staggeredSlideIn(index: index)
+                            .springCascade(index: index)
                     }
                 }
             }
@@ -802,7 +732,7 @@ struct MetricChip: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.system(size: 10, design: .rounded))
-                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .foregroundStyle(Palette.textSecondary)
                 Text(value)
                     .font(.system(.footnote, design: .rounded).weight(.bold))
                     .foregroundStyle(Palette.ink)
@@ -840,7 +770,7 @@ struct BudgetRing: View {
                     .foregroundStyle(Palette.ink)
                 Text("已用")
                     .font(.system(size: size * 0.16, design: .rounded))
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
             }
         }
         .frame(width: size, height: size)
@@ -901,7 +831,7 @@ struct TxRow: View {
                 }
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
                     .lineLimit(1)
             }
             if showsTags && !tx.tags.isEmpty {
@@ -937,7 +867,7 @@ struct TagChip: View {
     }
 }
 
-// MARK: - 标签栏按钮
+// MARK: - 标签栏按钮（激活标签下方具有径向琥珀暖金微光，形成内蕴能量感）
 
 struct TabItem: View {
     let tab: MoneyTab
@@ -947,16 +877,31 @@ struct TabItem: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: tab.icon)
-                    .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
-                Text(tab.title)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular, design: .rounded))
+            ZStack(alignment: .bottom) {
+                // 当前激活标签下方径向琥珀暖金微光
+                if isSelected {
+                    RadialGradient(
+                        colors: [Palette.amberGlow.opacity(0.70), Palette.amberWarm.opacity(0.20), Color.clear],
+                        center: .bottom,
+                        startRadius: 0,
+                        endRadius: 28
+                    )
+                    .frame(width: 46, height: 24)
+                    .offset(y: 8)
+                    .allowsHitTesting(false)
+                }
+
+                VStack(spacing: 3) {
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 17, weight: isSelected ? .heavy : .medium))
+                    Text(tab.title)
+                        .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
+                }
+                .foregroundStyle(isSelected ? Palette.amberGlow : Palette.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .contentShape(Capsule())
             }
-            .foregroundStyle(isSelected ? Palette.amberGlow : Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.55))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }

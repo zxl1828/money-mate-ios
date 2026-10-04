@@ -38,7 +38,7 @@ struct DebtTrackerCard: View {
                                     .foregroundStyle(Palette.ink)
                                 Text(account.kind == .receivable ? "待收回" : "待还出")
                                     .font(.caption2)
-                                    .foregroundStyle(Palette.ink.opacity(0.55))
+                                    .foregroundStyle(Palette.textSecondary)
                             }
                             Spacer(minLength: 0)
                             Text(store.money(abs(balance)))

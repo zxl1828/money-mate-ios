@@ -185,7 +185,7 @@ struct ReimbursementCard: View {
                                 .foregroundStyle(Palette.ink)
                             Text(tx.date.formatted(date: .abbreviated, time: .omitted))
                                 .font(.caption2)
-                                .foregroundStyle(Palette.ink.opacity(0.55))
+                                .foregroundStyle(Palette.textSecondary)
                         }
                         Spacer(minLength: 0)
                         Text(tx.shortAmount)
@@ -200,7 +200,7 @@ struct ReimbursementCard: View {
                 if pending.count > 5 {
                     Text("还有 " + String(pending.count - 5) + " 笔待报销")
                         .font(.caption2)
-                        .foregroundStyle(Palette.ink.opacity(0.55))
+                        .foregroundStyle(Palette.textSecondary)
                 }
             }
             .padding(16)

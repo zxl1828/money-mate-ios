@@ -366,7 +366,7 @@ struct BuddyHint: View {
             if let subtitle {
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }

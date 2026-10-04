@@ -253,7 +253,7 @@ struct AddSheet: View {
                             if !CategoryTree.children(of: name).isEmpty {
                                 Image(systemName: expandedCategory == name ? "chevron.up" : "chevron.down")
                                     .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(Palette.ink.opacity(0.45))
+                                    .foregroundStyle(Palette.textSecondary)
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -277,7 +277,7 @@ struct AddSheet: View {
                         } label: {
                             Image(systemName: "chevron.up")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Palette.ink.opacity(0.5))
+                                .foregroundStyle(Palette.textSecondary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -316,7 +316,7 @@ struct AddSheet: View {
             if store.activeAccounts.isEmpty {
                 Text("还没有账户，去「资产」页新建一个")
                     .font(.caption2)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -820,7 +820,7 @@ struct BudgetSheet: View {
             Slider(value: $store.budget, in: 500...80000, step: 500)
                 .tint(Palette.primary)
             Text("预算会在每个月 1 号自动重新计算进度")
-                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.55))
+                .font(.caption2).foregroundStyle(Palette.textSecondary)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -959,7 +959,7 @@ struct RecurringSheet: View {
             .buttonStyle(.plain)
             .liquidGlass(.clear.interactive(), in: Capsule())
             Text("补录的账单会标记箭头图标，可在明细里筛选。")
-                .font(.caption2).foregroundStyle(Palette.ink.opacity(0.55))
+                .font(.caption2).foregroundStyle(Palette.textSecondary)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -252,7 +252,7 @@ struct NetWorthPage: View {
                 if let limit {
                     Text("额度 " + store.money(limit))
                         .font(.caption2)
-                        .foregroundStyle(Palette.ink.opacity(0.5))
+                        .foregroundStyle(Palette.textSecondary)
                 }
             }
             Spacer(minLength: 0)
@@ -263,7 +263,7 @@ struct NetWorthPage: View {
                 .minimumScaleFactor(0.7)
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Palette.ink.opacity(0.35))
+                .foregroundStyle(Palette.textSecondary)
         }
     }
 
@@ -281,7 +281,7 @@ struct NetWorthPage: View {
             .frame(height: 6)
             Text(usedText + dueText)
                 .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.55))
+                .foregroundStyle(Palette.textSecondary)
         }
     }
 }
@@ -316,7 +316,7 @@ struct CreditReminderCard: View {
                                 .foregroundStyle(Palette.ink)
                             Text(item.summary.dueDate.map { "还款日 " + $0.formatted(date: .abbreviated, time: .omitted) } ?? "未设置还款日")
                                 .font(.caption2)
-                                .foregroundStyle(Palette.ink.opacity(0.55))
+                                .foregroundStyle(Palette.textSecondary)
                         }
                         Spacer(minLength: 0)
                         VStack(alignment: .trailing, spacing: 2) {
@@ -409,7 +409,7 @@ struct AccountEditorSheet: View {
                             .innerTile(Radius.chip, opacity: 0.10)
                         Text("信用卡 / 借入请填负数（欠款金额）")
                             .font(.caption2)
-                            .foregroundStyle(Palette.ink.opacity(0.5))
+                            .foregroundStyle(Palette.textSecondary)
 
                         Text("币种").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
                         Picker("币种", selection: $currency) {
@@ -669,7 +669,7 @@ struct TransferSheet: View {
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Palette.ink.opacity(0.4))
+                    .foregroundStyle(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 11)
@@ -743,7 +743,7 @@ struct AccountDetailSheet: View {
                 .foregroundStyle(store.balance(of: account.id) < 0 ? Palette.rose : Palette.ink)
             Text("初始余额 " + store.money(account.initialBalance))
                 .font(.caption2)
-                .foregroundStyle(Palette.ink.opacity(0.5))
+                .foregroundStyle(Palette.textSecondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity)
@@ -796,7 +796,7 @@ struct AccountDetailSheet: View {
             if items.isEmpty {
                 Text("这个账户还没有流水")
                     .font(.caption)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
             } else {
                 ForEach(items.prefix(60)) { tx in
                     HStack(spacing: 10) {
@@ -812,7 +812,7 @@ struct AccountDetailSheet: View {
                                 .lineLimit(1)
                             Text(tx.date.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption2)
-                                .foregroundStyle(Palette.ink.opacity(0.5))
+                                .foregroundStyle(Palette.textSecondary)
                         }
                         Spacer(minLength: 0)
                         Text(tx.shortAmount)

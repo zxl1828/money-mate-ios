@@ -219,7 +219,7 @@ struct AuditLogCard: View {
                         Spacer(minLength: 0)
                         Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption2)
-                            .foregroundStyle(Palette.ink.opacity(0.45))
+                            .foregroundStyle(Palette.textSecondary)
                     }
                 }
             }

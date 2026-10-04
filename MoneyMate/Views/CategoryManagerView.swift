@@ -82,7 +82,7 @@ struct CategoryManagerSheet: View {
                         if item.builtin || item.hidden {
                             Text(item.builtin ? "内置" : "自定义")
                                 .font(.caption2)
-                                .foregroundStyle(Palette.ink.opacity(0.45))
+                                .foregroundStyle(Palette.textSecondary)
                         }
                     }
                     Spacer(minLength: 0)
@@ -91,7 +91,7 @@ struct CategoryManagerSheet: View {
                     } label: {
                         Image(systemName: item.hidden ? "eye" : "eye.slash")
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Palette.ink.opacity(0.55))
+                            .foregroundStyle(Palette.textSecondary)
                             .frame(width: 30, height: 30)
                     }
                     .buttonStyle(.plain)

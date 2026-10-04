@@ -64,7 +64,7 @@ struct AttachmentEditor: View {
             } else {
                 Image(systemName: "doc.fill")
                     .frame(width: 66, height: 66)
-                    .foregroundStyle(Palette.ink.opacity(0.5))
+                    .foregroundStyle(Palette.textSecondary)
                     .background(Palette.primary.opacity(0.10),
                                 in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
             }
@@ -118,7 +118,7 @@ struct AttachmentGallery: View {
                             } else {
                                 Image(systemName: "doc.fill")
                                     .frame(width: 84, height: 84)
-                                    .foregroundStyle(Palette.ink.opacity(0.5))
+                                    .foregroundStyle(Palette.textSecondary)
                                     .background(Palette.primary.opacity(0.10),
                                                 in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
                             }

@@ -71,7 +71,7 @@ struct CalendarView: View {
                 ForEach(["日", "一", "二", "三", "四", "五", "六"], id: \.self) { w in
                     Text(w)
                         .font(.caption2)
-                        .foregroundStyle(Palette.ink.opacity(0.55))
+                        .foregroundStyle(Palette.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
             }

@@ -162,7 +162,7 @@ struct MapPickerView: View {
                     search.results = []
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Palette.ink.opacity(0.35))
+                        .foregroundStyle(Palette.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -190,7 +190,7 @@ struct MapPickerView: View {
                             if !item.subtitle.isEmpty {
                                 Text(item.subtitle)
                                     .font(.caption2)
-                                    .foregroundStyle(Palette.ink.opacity(0.55))
+                                    .foregroundStyle(Palette.textSecondary)
                                     .lineLimit(1)
                             }
                         }
@@ -219,7 +219,7 @@ struct MapPickerView: View {
                     .lineLimit(2)
                 Text(hint)
                     .font(.caption2)
-                    .foregroundStyle(Palette.ink.opacity(0.55))
+                    .foregroundStyle(Palette.textSecondary)
                     .lineLimit(2)
             }
             Spacer(minLength: 4)
