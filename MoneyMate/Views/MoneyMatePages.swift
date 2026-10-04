@@ -443,6 +443,7 @@ struct StatsPage: View {
     @State private var range: StatsRange = .week
     @State private var detailTitle: String? = nil
     @State private var detailRows: [ChartDetailRow] = []
+    @State private var hoveredPoint: StatsPoint? = nil
 
     var body: some View {
         ScrollView {
@@ -568,19 +569,37 @@ struct StatsPage: View {
         .frame(maxWidth: .infinity)
         .glassPanel(Radius.card, strong: true)
         .auraBorder(cornerRadius: Radius.card)
-        .tiltAndSheen(cornerRadius: Radius.card)
+        .purpleBreathingBacklight(cornerRadius: Radius.card)
     }
 
     private var trendCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "支出趋势", subtitle: range.title + " · 虚线为日均")
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("支出趋势")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.ink)
+                    if let pt = hoveredPoint {
+                        Text("当前数值: ¥ " + String(format: "%.2f", pt.expense))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(Palette.amberGlow)
+                            .contentTransition(.numericText())
+                    } else {
+                        Text(range.title + " · 虚线为日均")
+                            .font(.caption2)
+                            .foregroundStyle(Palette.ink.opacity(0.6))
+                    }
+                }
+                Spacer()
+            }
             TrendChart(points: points,
-                       average: store.rangeExpense(range) / Double(max(points.count, 1)))
+                       average: store.rangeExpense(range) / Double(max(points.count, 1)),
+                       onSelect: { hoveredPoint = $0 })
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
-        .tiltAndSheen(cornerRadius: Radius.card)
+        .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .onTapGesture { showTrendDetail() }
         .onLongPressGesture { showTrendDetail() }
@@ -609,7 +628,7 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
-        .tiltAndSheen(cornerRadius: Radius.card)
+        .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .onTapGesture { showCategoryDetail() }
         .onLongPressGesture { showCategoryDetail() }
@@ -623,7 +642,7 @@ struct StatsPage: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
-        .tiltAndSheen(cornerRadius: Radius.card)
+        .purpleBreathingBacklight(cornerRadius: Radius.card)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .onTapGesture { showMonthsDetail() }
         .onLongPressGesture { showMonthsDetail() }
@@ -690,22 +709,49 @@ struct MiniBarChart: View {
 struct TrendChart: View {
     let points: [StatsPoint]
     let average: Double
+    var onSelect: ((StatsPoint?) -> Void)? = nil
+
+    @State private var selectedDate: String? = nil
 
     var body: some View {
+        let selected = points.first(where: { $0.label == selectedDate })
         Chart {
             ForEach(points) { point in
                 AreaMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                    .foregroundStyle(LinearGradient(colors: [Palette.primary.opacity(0.42), Palette.primary.opacity(0.02)],
+                    .foregroundStyle(LinearGradient(colors: [Palette.neonViolet.opacity(0.42), Palette.neonViolet.opacity(0.02)],
                                                     startPoint: .top, endPoint: .bottom))
                     .interpolationMethod(.catmullRom)
                 LineMark(x: .value("日期", point.label), y: .value("支出", point.expense))
-                    .foregroundStyle(Palette.primary)
+                    .foregroundStyle(Palette.neonViolet)
                     .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                     .interpolationMethod(.catmullRom)
             }
             RuleMark(y: .value("日均", average))
                 .foregroundStyle(Palette.rose.opacity(0.8))
                 .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+
+            if let sel = selected {
+                RuleMark(x: .value("日期", sel.label))
+                    .foregroundStyle(Palette.amberGlow.opacity(0.8))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+                PointMark(x: .value("日期", sel.label), y: .value("支出", sel.expense))
+                    .symbolSize(80)
+                    .foregroundStyle(Palette.amberGlow)
+                    .annotation(position: .top) {
+                        Text("¥ " + String(format: "%.1f", sel.expense))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color(red: 0.12, green: 0.06, blue: 0.22), in: Capsule())
+                            .overlay(Capsule().stroke(Palette.amberGlow.opacity(0.6), lineWidth: 1))
+                    }
+            }
+        }
+        .chartXSelection(value: $selectedDate)
+        .onChange(of: selectedDate) { _, newDate in
+            let pt = points.first(where: { $0.label == newDate })
+            onSelect?(pt)
         }
         .chartYAxis {
             AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in

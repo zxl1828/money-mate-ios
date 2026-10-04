@@ -24,7 +24,7 @@ enum MascotMood {
     }
 }
 
-// MARK: - 小紫：一枚爱记账的紫色小钱币（纯 SwiftUI 形状绘制）
+// MARK: - 小紫：3D 紫晶智慧猫头鹰（博士帽 + 金色流苏 + 金丝眼镜 + 纯 SwiftUI 绘制）
 
 struct CoinBuddy: View {
     var mood: MascotMood = .happy
@@ -34,17 +34,17 @@ struct CoinBuddy: View {
     @State private var breathe = false
 
     private var s: CGFloat { size }
+    private let gold = Color(red: 0.96, green: 0.62, blue: 0.04)
 
     var body: some View {
         ZStack {
-            arms
-            coinBody
-            gloss
-            antenna
-            cheeks
-            eyesRow
-            mouth
-            accessory
+            haloGlow
+            feetRow
+            wingsRow
+            owlBody
+            glassesAndEyes
+            beak
+            mortarboardCap
         }
         .frame(width: s * 1.5, height: s * 1.5)
         .scaleEffect(breathe ? 1.02 : 0.98)
@@ -53,176 +53,173 @@ struct CoinBuddy: View {
         .task { await blinkLoop() }
     }
 
-    // MARK: 部件
-
-    private var coinBody: some View {
-        ZStack {
-            Circle().fill(Color.white.opacity(0.55))
-            Circle().fill(Palette.hero).padding(s * 0.08)
-            Circle().stroke(Color.white.opacity(0.70), lineWidth: s * 0.03).padding(s * 0.08)
-        }
-        .frame(width: s, height: s)
-        .shadow(color: Palette.primaryDeep.opacity(0.28), radius: s * 0.12, y: s * 0.06)
-    }
-
-    private var gloss: some View {
-        Ellipse()
-            .fill(Color.white.opacity(0.48))
-            .frame(width: s * 0.30, height: s * 0.15)
-            .rotationEffect(.degrees(-28))
-            .offset(x: -s * 0.21, y: -s * 0.24)
-            .blur(radius: s * 0.015)
-    }
-
-    private var antenna: some View {
-        VStack(spacing: 0) {
-            Circle()
-                .fill(Palette.mint)
-                .frame(width: s * 0.13)
-                .shadow(color: Palette.mint.opacity(0.6), radius: s * 0.05)
-            Capsule()
-                .fill(Palette.primary.opacity(0.55))
-                .frame(width: s * 0.035, height: s * 0.16)
-        }
-        .offset(y: -s * 0.58)
-        .rotationEffect(.degrees(mood == .cheer ? 14 : 0))
-    }
-
-    private var arms: some View {
-        HStack(spacing: s * 0.72) {
-            arm(angle: mood == .cheer ? -58 : 18)
-            arm(angle: mood == .cheer ? 58 : -18)
-        }
-        .offset(y: s * 0.10)
-    }
-
-    private func arm(angle: Double) -> some View {
-        Capsule()
-            .fill(Palette.primary.opacity(0.85))
-            .frame(width: s * 0.10, height: s * 0.24)
-            .rotationEffect(.degrees(angle), anchor: .top)
-    }
-
-    private var cheeks: some View {
-        HStack(spacing: s * 0.30) {
-            Circle().fill(Palette.rose.opacity(0.45)).frame(width: s * 0.11)
-            Circle().fill(Palette.rose.opacity(0.45)).frame(width: s * 0.11)
-        }
-        .offset(y: s * 0.07)
-    }
-
-    private var eyesRow: some View {
-        HStack(spacing: s * 0.15) {
-            eye
-            eye
-        }
-        .offset(y: -s * 0.05)
-    }
-
-    @ViewBuilder
-    private var eye: some View {
-        switch mood {
-        case .sleepy:
-            Capsule()
-                .fill(Palette.ink.opacity(0.85))
-                .frame(width: s * 0.16, height: s * 0.035)
-        case .panic:
-            Circle()
-                .fill(Color.white)
-                .frame(width: s * 0.15)
-                .overlay(Circle().fill(Palette.ink).frame(width: s * 0.075))
-        default:
-            Capsule()
-                .fill(Palette.ink)
-                .frame(width: s * 0.12, height: s * (blink ? 0.03 : 0.17))
-                .overlay(alignment: .topLeading) {
-                    Circle()
-                        .fill(Color.white.opacity(0.92))
-                        .frame(width: s * 0.038)
-                        .offset(x: s * 0.022, y: s * 0.03)
-                }
-        }
-    }
-
-    @ViewBuilder
-    private var mouth: some View {
-        switch mood {
-        case .cheer:
-            Ellipse()
-                .fill(Palette.ink.opacity(0.85))
-                .frame(width: s * 0.22, height: s * 0.15)
-                .offset(y: s * 0.14)
-        case .cool, .worried:
-            Capsule()
-                .fill(Palette.ink.opacity(0.85))
-                .frame(width: s * 0.17, height: s * 0.05)
-                .rotationEffect(.degrees(mood == .cool ? -8 : 0))
-                .offset(y: s * 0.15)
-        case .panic:
-            Circle()
-                .fill(Palette.ink.opacity(0.85))
-                .frame(width: s * 0.12)
-                .offset(y: s * 0.15)
-        case .sleepy:
-            Circle()
-                .fill(Palette.ink.opacity(0.70))
-                .frame(width: s * 0.07)
-                .offset(y: s * 0.14)
-        case .happy:
-            Capsule()
-                .fill(Palette.ink.opacity(0.85))
-                .frame(width: s * 0.20, height: s * 0.07)
-                .offset(y: s * 0.15)
-        }
-    }
-
-    private var goldCoin: some View {
+    private var haloGlow: some View {
         Circle()
-            .fill(LinearGradient(colors: [Color(red: 1.00, green: 0.86, blue: 0.46),
-                                          Color(red: 0.98, green: 0.66, blue: 0.20)],
-                                 startPoint: .top, endPoint: .bottom))
-            .frame(width: s * 0.26)
-            .overlay(
-                Text("\u{00A5}")
-                    .font(.system(size: s * 0.15, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color(red: 0.62, green: 0.36, blue: 0.05))
-            )
-            .shadow(color: Color(red: 0.98, green: 0.66, blue: 0.20).opacity(0.5), radius: s * 0.06, y: s * 0.02)
+            .fill(Color(red: 0.66, green: 0.33, blue: 0.97).opacity(0.40))
+            .frame(width: s * 0.88, height: s * 0.88)
+            .blur(radius: s * 0.14)
+    }
+
+    private var feetRow: some View {
+        HStack(spacing: s * 0.16) {
+            foot
+            foot
+        }
+        .offset(y: s * 0.36)
+    }
+
+    private var foot: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<3) { _ in
+                Capsule()
+                    .fill(gold)
+                    .frame(width: s * 0.05, height: s * 0.09)
+            }
+        }
+    }
+
+    private var wingsRow: some View {
+        HStack {
+            ZStack {
+                RoundedRectangle(cornerRadius: s * 0.06)
+                    .fill(Color(red: 0.30, green: 0.11, blue: 0.58))
+                    .frame(width: s * 0.24, height: s * 0.28)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: s * 0.06)
+                            .stroke(gold.opacity(0.7), lineWidth: 1.2)
+                    )
+                Image(systemName: "plus.forwardslash.minus")
+                    .font(.system(size: s * 0.13, weight: .bold))
+                    .foregroundStyle(gold)
+            }
+            .offset(x: -s * 0.06, y: s * 0.08)
+
+            Spacer()
+
+            RoundedRectangle(cornerRadius: s * 0.08)
+                .fill(LinearGradient(colors: [Color(red: 0.49, green: 0.13, blue: 0.81),
+                                              Color(red: 0.35, green: 0.11, blue: 0.53)],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: s * 0.20, height: s * 0.26)
+                .rotationEffect(.degrees(breathe ? -12 : -5))
+                .offset(x: s * 0.06, y: s * 0.08)
+        }
+        .frame(width: s * 1.02)
+    }
+
+    private var owlBody: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(colors: [Color(red: 0.66, green: 0.33, blue: 0.97),
+                                           Color(red: 0.49, green: 0.13, blue: 0.81),
+                                           Color(red: 0.23, green: 0.03, blue: 0.39)],
+                                   center: .init(x: 0.4, y: 0.35),
+                                   startRadius: 2,
+                                   endRadius: s * 0.5)
+                )
+                .overlay(
+                    Circle().stroke(Color.white.opacity(0.28), lineWidth: 1.2)
+                )
+                .shadow(color: Color.black.opacity(0.45), radius: s * 0.10, y: s * 0.05)
+
+            Capsule()
+                .fill(
+                    LinearGradient(colors: [Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.45),
+                                           Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.20)],
+                                   startPoint: .top, endPoint: .bottom)
+                )
+                .frame(width: s * 0.52, height: s * 0.40)
+                .offset(y: s * 0.16)
+        }
+        .frame(width: s * 0.82, height: s * 0.84)
+    }
+
+    private var glassesAndEyes: some View {
+        HStack(spacing: 0) {
+            eyeGlassesUnit
+            Rectangle()
+                .fill(gold)
+                .frame(width: s * 0.06, height: 1.8)
+            eyeGlassesUnit
+        }
+        .offset(y: -s * 0.06)
+    }
+
+    private var eyeGlassesUnit: some View {
+        ZStack {
+            Circle()
+                .stroke(gold, lineWidth: 1.8)
+                .frame(width: s * 0.26, height: s * 0.26)
+                .background(Circle().fill(Color(red: 0.10, green: 0.05, blue: 0.20).opacity(0.7)))
+
+            eyeView
+        }
     }
 
     @ViewBuilder
-    private var accessory: some View {
+    private var eyeView: some View {
         switch mood {
-        case .cheer:
-            ZStack {
-                Image(systemName: "sparkle")
-                    .font(.system(size: s * 0.22))
-                    .foregroundStyle(Palette.rose)
-                    .offset(x: s * 0.54, y: -s * 0.50)
-                Image(systemName: "sparkle")
-                    .font(.system(size: s * 0.16))
-                    .foregroundStyle(Palette.mint)
-                    .offset(x: -s * 0.56, y: -s * 0.30)
-                goldCoin.offset(x: s * 0.50, y: s * 0.42)
-            }
         case .panic:
-            Text("!")
-                .font(.system(size: s * 0.40, weight: .heavy, design: .rounded))
-                .foregroundStyle(Palette.rose)
-                .offset(x: s * 0.44, y: -s * 0.44)
-        case .sleepy:
-            Text("z z")
-                .font(.system(size: s * 0.20, weight: .bold, design: .rounded))
-                .foregroundStyle(Palette.primary.opacity(0.7))
-                .offset(x: s * 0.50, y: -s * 0.46)
+            ZStack {
+                Circle().fill(Color.white).frame(width: s * 0.18)
+                Circle().fill(Color.black).frame(width: s * 0.09)
+            }
         case .worried:
-            Ellipse()
-                .fill(Color(red: 0.56, green: 0.78, blue: 1.00))
-                .frame(width: s * 0.13, height: s * 0.18)
-                .offset(x: s * 0.44, y: -s * 0.36)
+            Capsule()
+                .fill(Color.white)
+                .frame(width: s * 0.16, height: s * 0.06)
+        case .sleepy:
+            Capsule()
+                .fill(gold)
+                .frame(width: s * 0.14, height: s * 0.04)
         default:
-            EmptyView()
+            ZStack {
+                Circle().fill(Color(red: 0.08, green: 0.04, blue: 0.15)).frame(width: s * 0.18)
+                if !blink {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: s * 0.06)
+                        .offset(x: -s * 0.03, y: -s * 0.03)
+                    Circle()
+                        .fill(Color.white.opacity(0.8))
+                        .frame(width: s * 0.03)
+                        .offset(x: s * 0.02, y: s * 0.02)
+                }
+            }
         }
+    }
+
+    private var beak: some View {
+        RoundedRectangle(cornerRadius: s * 0.02)
+            .fill(gold)
+            .frame(width: s * 0.09, height: s * 0.07)
+            .shadow(color: gold.opacity(0.6), radius: 3)
+            .offset(y: s * 0.06)
+    }
+
+    private var mortarboardCap: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: s * 0.03)
+                .fill(Color(red: 0.12, green: 0.07, blue: 0.22))
+                .frame(width: s * 0.65, height: s * 0.22)
+                .overlay(
+                    RoundedRectangle(cornerRadius: s * 0.03)
+                        .stroke(Color(red: 0.55, green: 0.36, blue: 0.96), lineWidth: 1.2)
+                )
+                .shadow(color: Color.black.opacity(0.5), radius: 5, y: 3)
+                .rotationEffect(.degrees(-4))
+
+            Circle()
+                .fill(gold)
+                .frame(width: s * 0.06, height: s * 0.06)
+
+            Capsule()
+                .fill(gold)
+                .frame(width: s * 0.028, height: s * 0.16)
+                .offset(x: s * 0.24, y: s * 0.06)
+        }
+        .offset(y: -s * 0.40)
     }
 
     @MainActor

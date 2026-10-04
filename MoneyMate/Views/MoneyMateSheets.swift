@@ -1343,7 +1343,7 @@ struct DetailSheet: View {
         .padding(20)
         .frame(maxWidth: .infinity)
         .glassPanel(Radius.card, strong: true)
-        .tiltAndSheen(cornerRadius: Radius.card)
+        .purpleBreathingBacklight(cornerRadius: Radius.card)
     }
 
     /// 所属账户 / 转账双方

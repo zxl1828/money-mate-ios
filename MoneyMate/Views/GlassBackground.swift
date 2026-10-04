@@ -6,8 +6,7 @@ struct GlassBackground: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Palette.lavender, Palette.lilac, Palette.lilac],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Palette.amethystBg
 
             GeometryReader { proxy in
                 let w = proxy.size.width

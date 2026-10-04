@@ -28,6 +28,23 @@ enum Palette {
     /// 背景光斑用的浅色块（深色下改为偏紫的暗光）
     static let blobLight = adaptive(light: (1, 1, 1), dark: (0.34, 0.29, 0.55))
 
+    // MARK: - 紫晶暗黑微拟物设计令牌
+    static let obsidianBlack = Color(red: 0.04, green: 0.03, blue: 0.06)
+    static let amethystDeep = Color(red: 0.06, green: 0.05, blue: 0.11)
+    static let amethystGlow = Color(red: 0.14, green: 0.09, blue: 0.26)
+    static let neonViolet = Color(red: 0.66, green: 0.33, blue: 0.97)
+    static let auroraPurple = Color(red: 0.55, green: 0.36, blue: 0.96)
+    static let lightLilac = Color(red: 0.75, green: 0.52, blue: 0.99)
+    static let amberGlow = Color(red: 0.96, green: 0.62, blue: 0.04)
+    static let amberWarm = Color(red: 0.98, green: 0.57, blue: 0.24)
+
+    static let amethystBg = RadialGradient(
+        colors: [amethystGlow, amethystDeep, obsidianBlack],
+        center: .top,
+        startRadius: 0,
+        endRadius: 650
+    )
+
     static let hero = LinearGradient(colors: [primarySoft, primary, primaryDeep],
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
     static let heroSoft = LinearGradient(colors: [blobLight.opacity(0.95), lilac],
@@ -165,84 +182,214 @@ struct SectionHeader: View {
 // 7 项高级流体/物理/拟态交互动效组件 (iOS 26 液态玻璃进阶)
 // ============================================================================
 
-// MARK: - 1. 跟随触摸位置的 3D 透视倾斜与镜像反射流光（松手带 spring 阻尼回正）
+// MARK: - 1. 平稳微拟态卡片容器（已完全移除 3D 透视倾斜与手指镜像光斑，杜绝抖动，保持平稳高级沉浸感）
 
 struct TiltAndSheenModifier: ViewModifier {
     var maxAngle: Double = 7.0
     var cornerRadius: CGFloat = Radius.card
 
-    @State private var dragOffset: CGSize = .zero
-    @State private var viewSize: CGSize = .zero
-    @State private var isTouching: Bool = false
-
     func body(content: Content) -> some View {
-        let halfW = max(viewSize.width / 2, 1)
-        let halfH = max(viewSize.height / 2, 1)
-        let normX = min(max(Double(dragOffset.width / halfW), -1.0), 1.0)
-        let normY = min(max(Double(dragOffset.height / halfH), -1.0), 1.0)
-        let pitch = -normY * maxAngle
-        let roll = normX * maxAngle
-        let unitX = (normX + 1.0) / 2.0
-        let unitY = (normY + 1.0) / 2.0
-
         content
-            .rotation3DEffect(.degrees(pitch), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
-            .rotation3DEffect(.degrees(roll), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
-            .overlay {
-                if isTouching {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.white.opacity(0.36), Color.white.opacity(0.08), Color.clear],
-                                center: UnitPoint(x: unitX, y: unitY),
-                                startRadius: 0,
-                                endRadius: max(viewSize.width, viewSize.height) * 0.75
-                            )
-                        )
-                        .blendMode(.plusLighter)
-                        .allowsHitTesting(false)
-                }
-            }
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: TiltSizeKey.self, value: proxy.size)
-                }
-            )
-            .onPreferenceChange(TiltSizeKey.self) { size in
-                viewSize = size
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { val in
-                        isTouching = true
-                        dragOffset = CGSize(
-                            width: val.location.x - halfW,
-                            height: val.location.y - halfH
-                        )
-                    }
-                    .onEnded { _ in
-                        withAnimation(.interpolatingSpring(stiffness: 280, damping: 20)) {
-                            isTouching = false
-                            dragOffset = .zero
-                        }
-                    }
-            )
-    }
-}
-
-private struct TiltSizeKey: PreferenceKey {
-    static var defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        value = nextValue()
     }
 }
 
 extension View {
     func tiltAndSheen(maxAngle: Double = 7.0, cornerRadius: CGFloat = Radius.card) -> some View {
-        self.modifier(TiltAndSheenModifier(maxAngle: maxAngle, cornerRadius: cornerRadius))
+        self
     }
 }
+
+// MARK: - 紫晶呼吸弥散背光
+struct PurpleBreathingBacklight: ViewModifier {
+    @State private var breathe = false
+    var cornerRadius: CGFloat = Radius.card
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Palette.neonViolet.opacity(breathe ? 0.32 : 0.12))
+                    .blur(radius: breathe ? 26 : 14)
+            )
+            .onAppear {
+                withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
+                    breathe = true
+                }
+            }
+    }
+}
+
+extension View {
+    func purpleBreathingBacklight(cornerRadius: CGFloat = Radius.card) -> some View {
+        self.modifier(PurpleBreathingBacklight(cornerRadius: cornerRadius))
+    }
+}
+
+// MARK: - 双层紫晶发光环形进度仪表盘 (GlowDoubleRing)
+struct GlowDoubleRing: View {
+    var progress: Double
+    var size: CGFloat = 88
+    var label: String = "已使用"
+
+    var body: some View {
+        let pct = Int((progress * 100).rounded())
+        ZStack {
+            Circle()
+                .fill(Palette.neonViolet.opacity(0.35))
+                .frame(width: size * 0.9, height: size * 0.9)
+                .blur(radius: 12)
+
+            Circle()
+                .stroke(Color(red: 0.23, green: 0.12, blue: 0.39).opacity(0.6), lineWidth: 6)
+                .frame(width: size * 0.88, height: size * 0.88)
+
+            Circle()
+                .trim(from: 0, to: max(0.02, CGFloat(min(progress, 1.0))))
+                .stroke(
+                    AngularGradient(
+                        colors: [Palette.auroraPurple, Palette.neonViolet, Color(red: 0.75, green: 0.52, blue: 0.99), Color(red: 0.22, green: 0.74, blue: 0.97), Palette.auroraPurple],
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: 6.5, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: size * 0.88, height: size * 0.88)
+
+            Circle()
+                .stroke(Color.white.opacity(0.12), lineWidth: 1.5)
+                .frame(width: size * 0.70, height: size * 0.70)
+
+            Circle()
+                .trim(from: 0, to: max(0.04, CGFloat(min(progress * 0.7, 0.7))))
+                .stroke(Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.75), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: size * 0.70, height: size * 0.70)
+
+            VStack(spacing: 1) {
+                Text("\(pct)%")
+                    .font(.system(size: size * 0.22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(label)
+                    .font(.system(size: size * 0.12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color(red: 0.85, green: 0.71, blue: 1.0).opacity(0.9))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: - 3D 凸起切面紫晶按键 (JewelTileButton)
+struct JewelTileButton: View {
+    let title: String
+    let symbol: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.35, green: 0.16, blue: 0.58), Color(red: 0.22, green: 0.08, blue: 0.38), Color(red: 0.14, green: 0.05, blue: 0.25)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(Palette.neonViolet.opacity(0.45), lineWidth: 1.2)
+                        )
+                        .shadow(color: Palette.neonViolet.opacity(0.35), radius: 10, y: 5)
+                        .shadow(color: .black.opacity(0.5), radius: 6, y: 3)
+
+                    VStack {
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.32), Color.white.opacity(0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 20)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .padding(.horizontal, 4)
+                        .padding(.top, 1)
+                        Spacer()
+                    }
+
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.12), Palette.primaryDeep.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: symbol)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.95, green: 0.91, blue: 1.0))
+                        )
+                }
+                .frame(width: 66, height: 66)
+
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.91, green: 0.84, blue: 1.0))
+            }
+        }
+        .springButton()
+    }
+}
+
+// MARK: - 45 度旋转紫晶切面菱形 FAB (DiamondJewelFab)
+struct DiamondJewelFab: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.75, green: 0.52, blue: 0.99), Color(red: 0.49, green: 0.13, blue: 0.81), Color(red: 0.30, green: 0.11, blue: 0.58)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.65), lineWidth: 1.4)
+                    )
+                    .rotationEffect(.degrees(45))
+                    .frame(width: 52, height: 52)
+                    .shadow(color: Palette.neonViolet.opacity(0.65), radius: 14, y: 4)
+                    .shadow(color: Palette.amberGlow.opacity(0.35), radius: 16, y: 6)
+
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .springButton()
+    }
+}
+
+// MARK: - 底部 Dock 后方琥珀金橙色弧形背光 (AmberHalo)
+struct AmberHalo: View {
+    var body: some View {
+        RadialGradient(
+            colors: [Palette.amberGlow.opacity(0.65), Color(red: 0.85, green: 0.47, blue: 0.02).opacity(0.35), Color.clear],
+            center: .bottom,
+            startRadius: 0,
+            endRadius: 90
+        )
+        .frame(width: 180, height: 60)
+        .clipShape(Capsule())
+        .allowsHitTesting(false)
+    }
+}
+
 
 // MARK: - 2. 胶囊按钮向弹窗面板流体形态变换
 
