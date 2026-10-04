@@ -981,6 +981,61 @@ struct BackupDocument: FileDocument {
     }
 }
 
+// MARK: - 资产概览卡片
+
+struct AssetOverviewCard: View {
+    let netWorth: Double
+    let accountCount: Int
+    let money: (Double) -> String
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                iconView
+                textView
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Palette.textTertiary)
+            }
+            .padding(16)
+            .clearLiquidGlass(cornerRadius: Radius.tile)
+        }
+        .buttonStyle(GelPressButtonStyle(cornerRadius: Radius.tile))
+    }
+
+    private var iconView: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Palette.auroraPurple, Palette.primaryDeep],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 44, height: 44)
+                .shadow(color: Palette.neonViolet.opacity(0.35), radius: 6)
+
+            Image(systemName: "banknote.fill")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private var textView: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("资产管理与净资产")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Palette.textPrimary)
+            Text("净资产 \(money(netWorth)) · \(accountCount) 个活跃账户")
+                .font(.caption)
+                .foregroundStyle(Palette.textSecondary)
+        }
+    }
+}
+
 // MARK: - 我的（设置）
 
 struct SettingsPage: View {
@@ -1111,46 +1166,12 @@ struct SettingsPage: View {
     }
 
     private var assetCard: some View {
-        Button {
-            showNetWorth = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Palette.auroraPurple, Palette.primaryDeep],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                        .shadow(color: Palette.neonViolet.opacity(0.35), radius: 6)
-
-                    Image(systemName: "banknote.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("资产管理与净资产")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(Palette.textPrimary)
-                    Text("净资产 " + store.money(store.netWorth) + " · " + String(store.activeAccounts.count) + " 个活跃账户")
-                        .font(.caption)
-                        .foregroundStyle(Palette.textSecondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Palette.textTertiary)
-            }
-            .padding(16)
-            .clearLiquidGlass(cornerRadius: Radius.tile)
-        }
-        .buttonStyle(GelPressButtonStyle(cornerRadius: Radius.tile))
+        AssetOverviewCard(
+            netWorth: store.netWorth,
+            accountCount: store.activeAccounts.count,
+            money: { store.money($0) },
+            onTap: { showNetWorth = true }
+        )
     }
 
     private var budgetCard: some View {
