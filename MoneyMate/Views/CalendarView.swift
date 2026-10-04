@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// 日历记账：月历看每天的账 + 节假日 + 人情往来（给谁送了什么）。
-/// 与安卓 `calendar_page.dart` 对应。
+/// 日历记账与未来现金流预测：
+/// 1. 月历看每天的账 + 节假日 + 人情往来（给谁送了什么）
+/// 2. 未来 30 天现金流预测：结合可用流动资产 + 周期账单 + 信用卡还款日预测资金水位与预警
 struct GiftRecord: Identifiable, Codable, Hashable {
     var id = UUID()
     var date: String
@@ -18,10 +19,30 @@ private struct DayBox: Identifiable {
     let day: Date
 }
 
+struct CashFlowScheduleItem: Identifiable, Hashable {
+    var id = UUID()
+    let date: Date
+    let dateString: String
+    let title: String
+    let amount: Double
+    let isIncome: Bool
+    let tag: String
+}
+
+struct CashFlowDayPoint: Identifiable, Hashable {
+    var id = UUID()
+    let dayIndex: Int
+    let date: Date
+    let dateLabel: String
+    let balance: Double
+    let isLow: Bool
+}
+
 struct CalendarView: View {
     @ObservedObject var store: MoneyStore
     @Environment(\.dismiss) private var dismiss
 
+    @State private var mode: Int = 0 // 0: 记账日历, 1: 现金流预测
     @State private var month = Date()
     @State private var gifts: [GiftRecord] = CalendarView.loadGifts()
     @State private var daySheet: DayBox?
@@ -34,18 +55,28 @@ struct CalendarView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    monthCard
-                    giftCard
+                    modePicker
+                    if mode == 0 {
+                        monthCard
+                        giftCard
+                    } else {
+                        cashFlowHeroCard
+                        cashFlowTrendCard
+                        upcomingScheduleCard
+                    }
                 }
                 .padding(20)
+                .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
             .background(GlassBackground())
-            .navigationTitle("日历记账")
+            .navigationTitle("日历与现金流")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") { dismiss() }
+                        .font(.system(.body, design: .rounded).weight(.semibold))
+                        .foregroundStyle(Palette.primary)
                 }
             }
             .sheet(item: $daySheet) { box in
@@ -54,6 +85,58 @@ struct CalendarView: View {
         }
     }
 
+    // MARK: - 模式切换
+    private var modePicker: some View {
+        HStack(spacing: 8) {
+            Button {
+                Haptics.tap()
+                mode = 0
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                    Text("日历与人情")
+                }
+                .font(.system(.footnote, design: .rounded).weight(mode == 0 ? .bold : .medium))
+                .foregroundStyle(mode == 0 ? Palette.primary : Palette.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    mode == 0 ? Palette.primary.opacity(0.16) : Color.white.opacity(0.04),
+                    in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
+                        .strokeBorder(mode == 0 ? Palette.primary.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Haptics.tap()
+                mode = 1
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                    Text("30天现金流预测")
+                }
+                .font(.system(.footnote, design: .rounded).weight(mode == 1 ? .bold : .medium))
+                .foregroundStyle(mode == 1 ? Palette.primary : Palette.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    mode == 1 ? Palette.primary.opacity(0.16) : Color.white.opacity(0.04),
+                    in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.tile, style: .continuous)
+                        .strokeBorder(mode == 1 ? Palette.primary.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - 模式 1：日历卡片
     private var monthCard: some View {
         VStack(spacing: 10) {
             HStack {
@@ -125,6 +208,7 @@ struct CalendarView: View {
         .background(bg, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
     }
 
+    // MARK: - 人情往来卡片
     private var giftCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "人情往来",
@@ -221,6 +305,258 @@ struct CalendarView: View {
             Spacer()
             Text(amount).font(.footnote).foregroundStyle(color)
         }
+    }
+
+    // MARK: - 模式 2：现金流预测看板
+    private var liquidBalance: Double {
+        store.activeAccounts
+            .filter { !$0.isCredit }
+            .reduce(0.0) { $0 + store.balance(of: $1) }
+    }
+
+    private var futureSchedule: [CashFlowScheduleItem] {
+        var items: [CashFlowScheduleItem] = []
+        let cal = Calendar.current
+        let today = Date()
+
+        for dayOffset in 1...30 {
+            guard let targetDate = cal.date(byAdding: .day, value: dayOffset, to: today) else { continue }
+            let targetDay = cal.component(.day, from: targetDate)
+            let targetWeekday = cal.component(.weekday, from: targetDate)
+
+            // 周期账单
+            for rule in store.recurringRules {
+                var matches = false
+                switch rule.recurrence {
+                case .daily:
+                    matches = true
+                case .weekly:
+                    let ruleWeekday = cal.component(.weekday, from: rule.date)
+                    matches = (ruleWeekday == targetWeekday)
+                case .monthly:
+                    let ruleDay = cal.component(.day, from: rule.date)
+                    matches = (ruleDay == targetDay)
+                case .none:
+                    break
+                }
+
+                if matches {
+                    let amount = abs(rule.amountCNY)
+                    items.append(CashFlowScheduleItem(
+                        date: targetDate,
+                        dateString: Self.longLabel(targetDate),
+                        title: rule.title.isEmpty ? rule.category : rule.title,
+                        amount: amount,
+                        isIncome: !rule.isExpense,
+                        tag: rule.isExpense ? "周期支出" : "预期收入"
+                    ))
+                }
+            }
+
+            // 信用卡到期还款
+            for acc in store.activeAccounts where acc.isCredit {
+                if acc.dueDay > 0 && acc.dueDay == targetDay {
+                    let balance = store.balance(of: acc)
+                    if balance < 0 {
+                        let debt = abs(balance)
+                        items.append(CashFlowScheduleItem(
+                            date: targetDate,
+                            dateString: Self.longLabel(targetDate),
+                            title: "\(acc.name) 信用卡到期还款",
+                            amount: debt,
+                            isIncome: false,
+                            tag: "信用卡还款"
+                        ))
+                    }
+                }
+            }
+        }
+
+        return items.sorted(by: { $0.date < $1.date })
+    }
+
+    private var cashFlowPoints: [CashFlowDayPoint] {
+        let cal = Calendar.current
+        let today = Date()
+        var current = liquidBalance
+        var points: [CashFlowDayPoint] = [
+            CashFlowDayPoint(dayIndex: 0, date: today, dateLabel: "今天", balance: current, isLow: current < 1000)
+        ]
+
+        let schedule = futureSchedule
+
+        for dayOffset in 1...30 {
+            guard let targetDate = cal.date(byAdding: .day, value: dayOffset, to: today) else { continue }
+            let dayItems = schedule.filter { cal.isDate($0.date, inSameDayAs: targetDate) }
+            for it in dayItems {
+                if it.isIncome {
+                    current += it.amount
+                } else {
+                    current -= it.amount
+                }
+            }
+            let label = "\(cal.component(.month, from: targetDate))/\(cal.component(.day, from: targetDate))"
+            points.append(CashFlowDayPoint(
+                dayIndex: dayOffset,
+                date: targetDate,
+                dateLabel: label,
+                balance: current,
+                isLow: current < 1000
+            ))
+        }
+
+        return points
+    }
+
+    private var lowestPoint: CashFlowDayPoint? {
+        cashFlowPoints.min(by: { $0.balance < $1.balance })
+    }
+
+    private var projectedEndingBalance: Double {
+        cashFlowPoints.last?.balance ?? liquidBalance
+    }
+
+    private var cashFlowHeroCard: some View {
+        let lowest = lowestPoint?.balance ?? liquidBalance
+        let isCritical = lowest < 0
+        let isWarning = lowest < 1000 && !isCritical
+
+        return VStack(spacing: 12) {
+            HStack {
+                Label("未来 30 天流动性预测", systemImage: "shield.lefthalf.filled")
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amber : Palette.mint))
+                Spacer()
+                Text(isCritical ? "⚠️ 预警：资金有透支风险" : (isWarning ? "⚡️ 关注：余额将低于千元" : "✅ 资金水位健康"))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(isCritical ? Palette.rose : (isWarning ? Palette.amber : Palette.mint))
+            }
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("当前活期资金")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Palette.textSecondary)
+                    Text(store.money(liquidBalance))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.textPrimary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("30 天后预估结余")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Palette.textSecondary)
+                    Text(store.money(projectedEndingBalance))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(projectedEndingBalance < liquidBalance ? Palette.rose : Palette.mint)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(12)
+            .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+
+            if let low = lowestPoint, low.isLow {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Palette.amber)
+                    Text("预计 \(low.dateLabel) 触及最低水位：\(store.money(low.balance))，请留意")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Palette.textPrimary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Palette.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    private var cashFlowTrendCard: some View {
+        let points = cashFlowPoints
+        let maxVal = max(points.map(\.balance).max() ?? 1000, 1000)
+        let minVal = min(points.map(\.balance).min() ?? 0, 0)
+        let range = max(maxVal - minVal, 1.0)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "资金水位走势", subtitle: "未来 30 天每日结余推演")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .bottom, spacing: 6) {
+                    ForEach(points) { p in
+                        VStack(spacing: 4) {
+                            Spacer()
+                            let heightRatio = CGFloat(max(p.balance - minVal, 50) / range)
+                            let barHeight = max(heightRatio * 70, 4)
+
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(
+                                    p.balance < 0 ? Palette.rose :
+                                    (p.balance < 1000 ? Palette.amber : Palette.primary)
+                                )
+                                .frame(width: 8, height: barHeight)
+
+                            Text(p.dayIndex == 0 ? "今天" : (p.dayIndex % 5 == 0 ? p.dateLabel : ""))
+                                .font(.system(size: 8))
+                                .foregroundStyle(Palette.textSecondary)
+                                .frame(height: 12)
+                        }
+                        .frame(width: 14, height: 95)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    private var upcomingScheduleCard: some View {
+        let items = futureSchedule
+
+        return VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "待发生收支时间线", subtitle: "\(items.count) 笔待入账与待还款")
+
+            if items.isEmpty {
+                Text("未来 30 天内暂无固定的周期账单与信用卡还款")
+                    .font(.caption2)
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(items) { it in
+                    HStack(spacing: 10) {
+                        Text(it.dateString)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Palette.primary)
+                            .frame(width: 52, alignment: .leading)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(it.title)
+                                .font(.system(.footnote, design: .rounded).weight(.medium))
+                                .foregroundStyle(Palette.textPrimary)
+                            Text(it.tag)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Palette.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Text((it.isIncome ? "+" : "-") + store.money(it.amount))
+                            .font(.system(.footnote, design: .rounded).weight(.semibold))
+                            .foregroundStyle(it.isIncome ? Palette.mint : Palette.rose)
+                    }
+                    .padding(.vertical, 4)
+                    Divider().background(Color.white.opacity(0.06))
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
     }
 
     private func addGift(on date: String) {

@@ -94,11 +94,24 @@ enum SmartMemory {
 final class PrivacyState: ObservableObject {
     static let shared = PrivacyState()
 
+    static let maskKey = "moneymate.privacy.masked"
+
     @Published var enabled: Bool {
         didSet { SmartMemory.privacyMode = enabled }
     }
 
+    @Published var isMasked: Bool {
+        didSet { UserDefaults.standard.set(isMasked, forKey: PrivacyState.maskKey) }
+    }
+
     private init() {
         enabled = SmartMemory.privacyMode
+        isMasked = UserDefaults.standard.bool(forKey: PrivacyState.maskKey)
+    }
+
+    func toggleMask() {
+        isMasked.toggle()
+        Haptics.medium()
     }
 }
+

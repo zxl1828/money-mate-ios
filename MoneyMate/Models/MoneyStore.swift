@@ -398,6 +398,14 @@ final class MoneyStore: ObservableObject {
     @Published var recurringEnabled: Bool { didSet { persist() } }
     @Published var accounts: [Account] { didSet { persist() } }
     @Published var categories: [TxCategory] { didSet { persist() } }
+    @Published var isAmountMasked: Bool = UserDefaults.standard.bool(forKey: "moneymate.privacy.masked")
+
+    func toggleAmountMask() {
+        isAmountMasked.toggle()
+        UserDefaults.standard.set(isAmountMasked, forKey: "moneymate.privacy.masked")
+        PrivacyState.shared.isMasked = isAmountMasked
+        Haptics.medium()
+    }
     @Published var appearance: AppearanceMode { didSet { persist() } }
     @Published var dailyReminder: Bool { didSet { persist() } }
     @Published var dailyReminderHour: Int { didSet { persist() } }
@@ -847,11 +855,22 @@ final class MoneyStore: ObservableObject {
     // MARK: 金额格式化
 
     func money(_ value: Double) -> String {
+        if isAmountMasked {
+            return (value < 0 ? "- \u{00A5} " : "\u{00A5} ") + "\u{2022}\u{2022}\u{2022}\u{2022}"
+        }
+        let text = MoneyStore.decimalFormatter.string(from: NSNumber(value: abs(value))) ?? "0.00"
+        return (value < 0 ? "- \u{00A5} " : "\u{00A5} ") + text
+    }
+
+    func unmaskedMoney(_ value: Double) -> String {
         let text = MoneyStore.decimalFormatter.string(from: NSNumber(value: abs(value))) ?? "0.00"
         return (value < 0 ? "- \u{00A5} " : "\u{00A5} ") + text
     }
 
     func compact(_ value: Double) -> String {
+        if isAmountMasked {
+            return (value < 0 ? "-" : "") + "\u{2022}\u{2022}\u{2022}\u{2022}"
+        }
         let absValue = abs(value)
         let sign = value < 0 ? "-" : ""
         if absValue >= 10000 {
@@ -859,6 +878,7 @@ final class MoneyStore: ObservableObject {
         }
         return sign + String(format: "%.0f", absValue)
     }
+
 
     private static let decimalFormatter: NumberFormatter = {
         let f = NumberFormatter()

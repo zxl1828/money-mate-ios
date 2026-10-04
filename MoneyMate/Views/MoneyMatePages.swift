@@ -456,8 +456,10 @@ struct StatsPage: View {
                 monthsCard.springCascade(index: 5, trigger: range)
                 metricsGrid.springCascade(index: 6, trigger: range)
                 insightsCard.springCascade(index: 7, trigger: range)
-                InsightPanel(store: store).springCascade(index: 8, trigger: range)
+                LatteFactorCard(store: store).springCascade(index: 8, trigger: range)
+                InsightPanel(store: store).springCascade(index: 9, trigger: range)
             }
+
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 220)
@@ -1051,6 +1053,8 @@ struct SettingsPage: View {
     @State private var showCalendar = false
     @State private var showCategories = false
     @State private var showLedgerMerge = false
+    @State private var showSmartBudget = false
+    @State private var showBillImport = false
     @State private var shareFile: ShareFile?
     @ObservedObject private var cloud = CloudSyncService.shared
     @ObservedObject private var privacy = PrivacyState.shared
@@ -1103,6 +1107,12 @@ struct SettingsPage: View {
         .sheet(isPresented: $showCategories) {
             CategoryManagerSheet(store: store)
         }
+        .sheet(isPresented: $showSmartBudget) {
+            SmartBudgetSheet(store: store)
+        }
+        .sheet(isPresented: $showBillImport) {
+            BillImportSheet(store: store)
+        }
         .sheet(item: $shareFile) { file in
             ShareSheet(items: [file.url])
         }
@@ -1110,6 +1120,7 @@ struct SettingsPage: View {
             handleLedgerMerge(result)
         }
     }
+
 
     private func handleLedgerMerge(_ result: Result<URL, Error>) {
         switch result {
@@ -1189,10 +1200,8 @@ struct SettingsPage: View {
                     .font(.caption).foregroundStyle(Palette.ink.opacity(0.65))
             }
             HStack(spacing: 10) {
-                glassButton(title: "智能建议", systemImage: "wand.and.stars") {
-                    let suggestion = store.budgetSuggestion()
-                    withAnimation { store.budget = suggestion }
-                    toast("已按近 30 天支出建议 " + store.money(suggestion))
+                glassButton(title: "智能预算", systemImage: "sparkles") {
+                    showSmartBudget = true
                 }
                 glassButton(title: "分类预算", systemImage: "chart.pie.fill") {
                     showCategoryBudget = true
@@ -1201,6 +1210,7 @@ struct SettingsPage: View {
                     showCalendar = true
                 }
             }
+
             // 非常规支出：标了就不参与预算建议（节日 / 婚礼 / 一次性大件）
             Text("非常规支出（不计入预算建议）")
                 .font(.caption2).foregroundStyle(Palette.textSecondary)
@@ -1439,9 +1449,13 @@ struct SettingsPage: View {
 
     private var dataCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "数据与备份", subtitle: "导出 JSON，换机也能恢复")
+            SectionHeader(title: "数据与备份", subtitle: "账单导入、数据备份与迁移")
+            glassRow(title: "微信 / 支付宝账单 CSV 导入", systemImage: "arrow.down.doc.fill") {
+                showBillImport = true
+            }
             glassRow(title: "导出账本备份", systemImage: "square.and.arrow.up") { showExport = true }
             glassRow(title: "从备份恢复", systemImage: "tray.and.arrow.down") { showImport = true }
+
             plainRow(title: "恢复示例数据", systemImage: "arrow.counterclockwise", tint: Palette.ink.opacity(0.85)) {
                 store.restoreSamples()
                 toast("已恢复示例数据")

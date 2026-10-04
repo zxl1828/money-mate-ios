@@ -770,6 +770,7 @@ struct BudgetSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showCategory = false
+    @State private var showSmartEngine = false
 
     var body: some View {
         NavigationStack {
@@ -793,6 +794,9 @@ struct BudgetSheet: View {
             }
             .sheet(isPresented: $showCategory) {
                 CategoryBudgetSheet(store: store)
+            }
+            .sheet(isPresented: $showSmartEngine) {
+                SmartBudgetSheet(store: store)
             }
         }
     }
@@ -830,20 +834,20 @@ struct BudgetSheet: View {
     private var actionCard: some View {
         VStack(spacing: 10) {
             Button {
-                let suggestion = store.budgetSuggestion()
-                withAnimation(.spring(response: 0.24, dampingFraction: 0.92)) { store.budget = suggestion }
+                Haptics.tap()
+                showSmartEngine = true
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "wand.and.stars")
+                    Image(systemName: "sparkles")
                         .foregroundStyle(.white)
                         .frame(width: 34, height: 34)
                         .background(Palette.hero, in: Circle())
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("智能预算建议")
+                        Text("AI 智能预算诊断与推荐")
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(Palette.ink)
-                        Text("按近 30 天支出推算：" + store.money(store.budgetSuggestion()))
-                            .font(.caption2).foregroundStyle(Palette.ink.opacity(0.6))
+                        Text("自动识别节日人情、耐用品与离群大单，剔除特殊开销测算")
+                            .font(.system(size: 11)).foregroundStyle(Palette.ink.opacity(0.6))
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.right.circle.fill")
@@ -853,6 +857,7 @@ struct BudgetSheet: View {
             }
             .buttonStyle(.plain)
             .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+
 
             Button {
                 showCategory = true

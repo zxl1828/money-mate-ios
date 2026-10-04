@@ -558,6 +558,10 @@ struct HomePage: View {
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        store.toggleAmountMask()
+                    }
                 Text("本月预算 " + store.money(store.budget))
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(Palette.textSecondary)
@@ -565,6 +569,7 @@ struct HomePage: View {
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(Palette.textSecondary)
             }
+
 
             Spacer(minLength: 4)
 

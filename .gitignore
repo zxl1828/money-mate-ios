@@ -1,4 +1,6 @@
 release/
+release*/
 build/
 *.xcuserstate
 .DS_Store
+
