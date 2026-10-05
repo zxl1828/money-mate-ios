@@ -437,15 +437,6 @@ struct QuickActionsKeypad: View {
 }
 
 /// 兼容老接口
-struct JewelTileButton: View {
-    let title: String
-    let symbol: String
-    let action: () -> Void
-
-    var body: some View {
-        KeypadItemButton(title: title, symbol: symbol, action: action)
-    }
-}
 
 // MARK: - 4. 3D 立体切面紫晶宝石按键 (DiamondJewelFab)
 /// 顶部边缘清晰镜面高光，中心纯白符号微凸，按键四周投射扩散的紫罗兰色背光阴影
@@ -944,9 +935,6 @@ extension View {
     }
 }
 
-struct TiltAndSheenModifier: ViewModifier {
-    func body(content: Content) -> some View { content }
-}
 
 extension View {
     func tiltAndSheen(maxAngle: Double = 7.0, cornerRadius: CGFloat = Radius.card) -> some View { self }

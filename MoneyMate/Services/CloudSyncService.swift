@@ -31,7 +31,6 @@ final class CloudSyncService: ObservableObject {
 
     private let kv = NSUbiquitousKeyValueStore.default
     private let payloadKey = "moneymate.sync.payload"
-    private let stampKey = "moneymate.sync.stamp"
     private let maxBytes = 900_000   // iCloud 键值存储单值上限约 1MB
 
     private struct Envelope: Codable {

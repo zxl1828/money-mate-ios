@@ -391,50 +391,6 @@ struct TransactionsPage: View {
 }
 // MARK: - 统计页
 
-struct ChartDetailRow: Identifiable {
-    let id = UUID()
-    let label: String
-    let value: String
-}
-
-struct ChartDetailSheet: View {
-    let title: String
-    let rows: [ChartDetailRow]
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    ForEach(rows) { row in
-                        HStack {
-                            Text(row.label)
-                                .font(.system(.footnote, design: .rounded))
-                                .foregroundStyle(Palette.ink.opacity(0.85))
-                            Spacer()
-                            Text(row.value)
-                                .font(.system(.footnote, design: .rounded).weight(.semibold))
-                                .foregroundStyle(Palette.primary)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 14)
-                        .innerTile(Radius.small, opacity: 0.10)
-                    }
-                }
-                .padding(20)
-            }
-            .background(GlassBackground())
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
-                }
-            }
-            .rubberBandSheet { dismiss() }
-        }
-    }
-}
 
 struct StatsPage: View {
     @ObservedObject var store: MoneyStore
@@ -689,24 +645,6 @@ struct StatsPage: View {
 }
 // MARK: - 图表组件
 
-struct MiniBarChart: View {
-    let points: [DayPoint]
-
-    var body: some View {
-        Chart(points) { point in
-            BarMark(x: .value("日期", point.label), y: .value("支出", point.value), width: .fixed(18))
-                .foregroundStyle(Palette.hero)
-                .cornerRadius(8)
-        }
-        .chartYAxis(.hidden)
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 7)) { _ in
-                AxisValueLabel().font(.system(size: 9, design: .rounded))
-            }
-        }
-        .frame(height: 132)
-    }
-}
 
 struct TrendChart: View {
     let points: [StatsPoint]
