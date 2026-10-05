@@ -137,10 +137,12 @@ struct ExpandedChartModal: View {
                                 lineWidth: 1.2
                             )
                     )
-                    .shadow(color: Color.black.opacity(0.65), radius: 36, x: 0, y: 16)
+                    // 阴影收敛：单层、紫调、半径砍半（原来 36×黑 0.65 是掉帧大户）
+                    .shadow(color: Color.black.opacity(0.38), radius: 18, x: 0, y: 10)
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 24)
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
             .offset(y: max(0, dragOffset))
             .gesture(
                 DragGesture()

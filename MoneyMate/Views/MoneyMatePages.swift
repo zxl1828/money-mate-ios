@@ -472,6 +472,12 @@ struct StatsPage: View {
                 store: store,
                 onDismiss: { expandedChart = nil }
             )
+            // 清掉系统弹窗底板：否则顶部圆角与状态栏处会露出灰白底（脏边）
+            .presentationBackground(.clear)
+            .presentationCornerRadius(0)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.hidden)
+            .ignoresSafeArea()
         }
     }
 

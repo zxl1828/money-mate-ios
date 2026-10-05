@@ -535,13 +535,22 @@ struct ToroidalGemRing: View {
     var showOuterGlow: Bool = true
     var showCenterWell: Bool = true
 
+    @Environment(\.colorScheme) private var scheme
+
+    /// 动画进度只活在这个子视图里：数值变化用弹簧阻尼插值，
+    /// 高频刷新（端点呼吸、光晕）也不会波及父级卡片或页面。
+    @State private var animatedP: Double = 0
+    @State private var didAppear = false
+    @State private var breathe = false
+
     var body: some View {
         let clampedP = max(0.0, min(progress, 1.0))
-        let displayP = max(0.015, clampedP)
+        let displayP = max(0.015, didAppear ? animatedP : clampedP)
         let pct = Int((clampedP * 100).rounded())
         let strokeW = max(size * 0.125, 4.0)
         let radius = max((size - strokeW) / 2 - 2, 2.0)
         let center = CGPoint(x: size / 2, y: size / 2)
+        let light = scheme == .light
 
         // 终点发光微晶珠子坐标计算
         let endAngle = displayP * 2 * .pi - .pi / 2
@@ -551,21 +560,36 @@ struct ToroidalGemRing: View {
         ZStack {
             // 0. 外层弥散呼吸背光
             if showOuterGlow {
+                // 用径向渐变代替 blur：同样的柔光观感，GPU 成本几乎为零
                 Circle()
-                    .fill(Palette.neonViolet.opacity(0.32))
-                    .frame(width: size * 0.88, height: size * 0.88)
-                    .blur(radius: max(size * 0.12, 6))
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Palette.neonViolet.opacity(light ? 0.22 : 0.32),
+                                Palette.neonViolet.opacity(0.0)
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: size * 0.5
+                        )
+                    )
+                    .frame(width: size * 1.25, height: size * 1.25)
             }
 
             // 1. 环形凹槽导轨底座 (Recessed Track Well)
-            // 物理向内凹陷的深曜黑紫基座槽
+            // 物理向内凹陷的槽：浅色模式走高明度薰衣草灰，深色模式走深曜紫
             Circle()
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
-                            Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
-                        ],
+                        colors: light
+                            ? [
+                                Color(red: 0.84, green: 0.82, blue: 0.92).opacity(0.95),
+                                Color(red: 0.91, green: 0.90, blue: 0.97).opacity(0.95)
+                            ]
+                            : [
+                                Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
+                                Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
+                            ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
@@ -575,16 +599,24 @@ struct ToroidalGemRing: View {
 
             // 槽内双轨倒角高光边框 (模拟机械加工/水晶雕刻出的滑轨边缘)
             Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .stroke(Color.white.opacity(light ? 0.75 : 0.12), lineWidth: 1)
                 .frame(width: (radius + strokeW / 2) * 2, height: (radius + strokeW / 2) * 2)
 
             Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(
+                    light ? Color(red: 0.72, green: 0.70, blue: 0.84).opacity(0.55)
+                          : Color.white.opacity(0.08),
+                    lineWidth: 1
+                )
                 .frame(width: max((radius - strokeW / 2) * 2, 2), height: max((radius - strokeW / 2) * 2, 2))
 
             // 凹槽内部深景深微阴影 (呈现深深凹陷质感)
             Circle()
-                .stroke(Color.black.opacity(0.48), lineWidth: max(strokeW * 0.28, 1))
+                .stroke(
+                    light ? Color(red: 0.55, green: 0.52, blue: 0.70).opacity(0.28)
+                          : Color.black.opacity(0.48),
+                    lineWidth: max(strokeW * 0.28, 1)
+                )
                 .frame(width: radius * 2, height: radius * 2)
 
             // 2. 微凹透镜内芯 (Concave Glass Well)
@@ -593,10 +625,15 @@ struct ToroidalGemRing: View {
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [
-                                Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.85),
-                                Color(red: 0.16, green: 0.10, blue: 0.28).opacity(0.35)
-                            ],
+                            colors: light
+                                ? [
+                                    Color.white.opacity(0.95),
+                                    Color(red: 0.90, green: 0.89, blue: 0.97).opacity(0.55)
+                                ]
+                                : [
+                                    Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.85),
+                                    Color(red: 0.16, green: 0.10, blue: 0.28).opacity(0.35)
+                                ],
                             center: .center,
                             startRadius: 0,
                             endRadius: radius - strokeW / 2
@@ -654,14 +691,45 @@ struct ToroidalGemRing: View {
                 .rotationEffect(.degrees(-90))
                 .frame(width: radius * 2, height: radius * 2)
 
+            // 管体内侧深渐变：让管体看起来是圆柱截面而不是平涂描边
+            Circle()
+                .trim(from: 0, to: CGFloat(displayP))
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Palette.primaryDeep.opacity(0.55),
+                            Color.clear
+                        ],
+                        startPoint: .bottomTrailing,
+                        endPoint: .topLeading
+                    ),
+                    style: StrokeStyle(lineWidth: max(strokeW * 0.42, 1.5), lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: radius * 2, height: radius * 2)
+
             // 4. 端点发光微晶圆珠 (Glowing Gem Bead)
             if displayP > 0.02 {
-                // 外层发光晕
+                // 外层发光晕（径向渐变 + 呼吸缩放，替代 blur）
                 Circle()
-                    .fill(Palette.neonViolet.opacity(0.65))
-                    .frame(width: strokeW * 1.5, height: strokeW * 1.5)
-                    .blur(radius: 3)
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Palette.neonViolet.opacity(0.55),
+                                Palette.neonViolet.opacity(0.0)
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: strokeW * 1.35
+                        )
+                    )
+                    .frame(width: strokeW * 2.7, height: strokeW * 2.7)
                     .position(x: beadX, y: beadY)
+                    .scaleEffect(breathe ? 1.12 : 0.92)
+                    .animation(
+                        .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                        value: breathe
+                    )
 
                 // 微晶圆珠球体核心
                 Circle()
@@ -687,14 +755,26 @@ struct ToroidalGemRing: View {
             VStack(spacing: 1) {
                 Text(percentText ?? "\(pct)%")
                     .font(.system(size: size * 0.22, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(light ? Palette.ink : Color.white)
                     .contentTransition(.numericText())
                 Text(label)
                     .font(.system(size: size * 0.12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.98))
+                    .foregroundStyle(light ? Palette.ink.opacity(0.65)
+                                           : Color(red: 0.82, green: 0.72, blue: 0.98))
             }
         }
         .frame(width: size, height: size)
+        .onAppear {
+            animatedP = clampedP
+            didAppear = true
+            breathe = true
+        }
+        .onChange(of: clampedP) { _, newValue in
+            // 流体阻尼：弹簧插值，禁止生硬跳变
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
+                animatedP = newValue
+            }
+        }
     }
 }
 

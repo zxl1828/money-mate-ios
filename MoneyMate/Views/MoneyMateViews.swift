@@ -427,6 +427,11 @@ struct HomePage: View {
                 store: store,
                 onDismiss: { expandedChart = nil }
             )
+            .presentationBackground(.clear)
+            .presentationCornerRadius(0)
+            .presentationDetents([.large])
+            .presentationDragIndicator(.hidden)
+            .ignoresSafeArea()
         }
     }
 

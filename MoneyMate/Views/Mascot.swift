@@ -33,8 +33,23 @@ struct CoinBuddy: View {
     @State private var blink = false
     @State private var breathe = false
 
+    @Environment(\.colorScheme) private var scheme
+
     private var s: CGFloat { size }
     private let gold = Color(red: 0.96, green: 0.62, blue: 0.04)
+
+    // MARK: 双模式配色（浅色=淡紫罗兰/珠光白/金丝，深色=紫晶深调）
+    private var isLight: Bool { scheme == .light }
+    private var bodyLight: Color { isLight ? Color(red: 0.86, green: 0.81, blue: 1.00) : Color(red: 0.66, green: 0.33, blue: 0.97) }
+    private var bodyMid: Color { isLight ? Color(red: 0.72, green: 0.62, blue: 0.98) : Color(red: 0.49, green: 0.13, blue: 0.81) }
+    private var bodyEdge: Color { isLight ? Color(red: 0.55, green: 0.45, blue: 0.88) : Color(red: 0.23, green: 0.03, blue: 0.39) }
+    private var wingFill: Color { isLight ? Color(red: 0.79, green: 0.72, blue: 0.99) : Color(red: 0.30, green: 0.11, blue: 0.58) }
+    private var bellyFill: Color { isLight ? Color.white.opacity(0.85) : Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.45) }
+    private var bellyFillLow: Color { isLight ? Color(red: 0.90, green: 0.86, blue: 1.00).opacity(0.65) : Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.20) }
+    private var lensFill: Color { isLight ? Color(red: 0.95, green: 0.94, blue: 1.00) : Color(red: 0.10, green: 0.05, blue: 0.20).opacity(0.7) }
+    private var capFill: Color { isLight ? Color(red: 0.64, green: 0.55, blue: 0.93) : Color(red: 0.12, green: 0.07, blue: 0.22) }
+    private var pupilInk: Color { isLight ? Color(red: 0.30, green: 0.22, blue: 0.55) : Color(red: 0.08, green: 0.04, blue: 0.15) }
+    private var softShadow: Color { isLight ? Color(red: 0.42, green: 0.34, blue: 0.72).opacity(0.26) : Color.black.opacity(0.45) }
 
     var body: some View {
         ZStack {
@@ -55,9 +70,18 @@ struct CoinBuddy: View {
 
     private var haloGlow: some View {
         Circle()
-            .fill(Color(red: 0.66, green: 0.33, blue: 0.97).opacity(0.40))
-            .frame(width: s * 0.88, height: s * 0.88)
-            .blur(radius: s * 0.14)
+            .fill(
+                RadialGradient(
+                    colors: [
+                        bodyLight.opacity(isLight ? 0.45 : 0.40),
+                        bodyLight.opacity(0)
+                    ],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: s * 0.62
+                )
+            )
+            .frame(width: s * 1.24, height: s * 1.24)
     }
 
     private var feetRow: some View {
@@ -82,7 +106,7 @@ struct CoinBuddy: View {
         HStack {
             ZStack {
                 RoundedRectangle(cornerRadius: s * 0.06)
-                    .fill(Color(red: 0.30, green: 0.11, blue: 0.58))
+                    .fill(wingFill)
                     .frame(width: s * 0.24, height: s * 0.28)
                     .overlay(
                         RoundedRectangle(cornerRadius: s * 0.06)
@@ -97,8 +121,8 @@ struct CoinBuddy: View {
             Spacer()
 
             RoundedRectangle(cornerRadius: s * 0.08)
-                .fill(LinearGradient(colors: [Color(red: 0.49, green: 0.13, blue: 0.81),
-                                              Color(red: 0.35, green: 0.11, blue: 0.53)],
+                .fill(LinearGradient(colors: [bodyMid,
+                                              bodyEdge],
                                      startPoint: .top, endPoint: .bottom))
                 .frame(width: s * 0.20, height: s * 0.26)
                 .rotationEffect(.degrees(breathe ? -12 : -5))
@@ -111,22 +135,22 @@ struct CoinBuddy: View {
         ZStack {
             Circle()
                 .fill(
-                    RadialGradient(colors: [Color(red: 0.66, green: 0.33, blue: 0.97),
-                                           Color(red: 0.49, green: 0.13, blue: 0.81),
-                                           Color(red: 0.23, green: 0.03, blue: 0.39)],
+                    RadialGradient(colors: [bodyLight,
+                                           bodyMid,
+                                           bodyEdge],
                                    center: .init(x: 0.4, y: 0.35),
                                    startRadius: 2,
                                    endRadius: s * 0.5)
                 )
                 .overlay(
-                    Circle().stroke(Color.white.opacity(0.28), lineWidth: 1.2)
+                    Circle().stroke(Color.white.opacity(isLight ? 0.65 : 0.28), lineWidth: 1.2)
                 )
-                .shadow(color: Color.black.opacity(0.45), radius: s * 0.10, y: s * 0.05)
+                .shadow(color: softShadow, radius: s * 0.06, y: s * 0.035)
 
             Capsule()
                 .fill(
-                    LinearGradient(colors: [Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.45),
-                                           Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.20)],
+                    LinearGradient(colors: [bellyFill,
+                                           bellyFillLow],
                                    startPoint: .top, endPoint: .bottom)
                 )
                 .frame(width: s * 0.52, height: s * 0.40)
@@ -151,7 +175,7 @@ struct CoinBuddy: View {
             Circle()
                 .stroke(gold, lineWidth: 1.8)
                 .frame(width: s * 0.26, height: s * 0.26)
-                .background(Circle().fill(Color(red: 0.10, green: 0.05, blue: 0.20).opacity(0.7)))
+                .background(Circle().fill(lensFill))
 
             eyeView
         }
@@ -163,7 +187,7 @@ struct CoinBuddy: View {
         case .panic:
             ZStack {
                 Circle().fill(Color.white).frame(width: s * 0.18)
-                Circle().fill(Color.black).frame(width: s * 0.09)
+                Circle().fill(pupilInk).frame(width: s * 0.09)
             }
         case .worried:
             Capsule()
@@ -175,7 +199,7 @@ struct CoinBuddy: View {
                 .frame(width: s * 0.14, height: s * 0.04)
         default:
             ZStack {
-                Circle().fill(Color(red: 0.08, green: 0.04, blue: 0.15)).frame(width: s * 0.18)
+                Circle().fill(pupilInk).frame(width: s * 0.18)
                 if !blink {
                     Circle()
                         .fill(Color.white)
@@ -201,13 +225,13 @@ struct CoinBuddy: View {
     private var mortarboardCap: some View {
         ZStack {
             RoundedRectangle(cornerRadius: s * 0.03)
-                .fill(Color(red: 0.12, green: 0.07, blue: 0.22))
+                .fill(capFill)
                 .frame(width: s * 0.65, height: s * 0.22)
                 .overlay(
                     RoundedRectangle(cornerRadius: s * 0.03)
                         .stroke(Color(red: 0.55, green: 0.36, blue: 0.96), lineWidth: 1.2)
                 )
-                .shadow(color: Color.black.opacity(0.5), radius: 5, y: 3)
+                .shadow(color: softShadow, radius: 3, y: 2)
                 .rotationEffect(.degrees(-4))
 
             Circle()
