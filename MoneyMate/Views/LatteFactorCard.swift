@@ -31,9 +31,6 @@ struct LatteFactorCard: View {
         max(currentMonthExpenses.reduce(0) { $0 + abs($1.amountCNY) }, 1.0)
     }
 
-        (totalLatteAmount / totalMonthExpense) * 100.0
-    }
-
     private var annualizedCost: Double {
         totalLatteAmount * 12.0
     }
