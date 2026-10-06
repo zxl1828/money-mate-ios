@@ -360,7 +360,7 @@ struct GelPressButtonStyle: ButtonStyle {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
-                                colors: [Color.black.opacity(0.40), Palette.neonViolet.opacity(0.25)],
+                                colors: [Palette.obsidianBlack.opacity(0.40), Palette.neonViolet.opacity(0.25)],
                                 startPoint: .top,
                                 endPoint: .bottom
                             ),
@@ -942,7 +942,7 @@ struct SpringOvershootButtonStyle: ButtonStyle {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .strokeBorder(
                             LinearGradient(
-                                colors: [Color.black.opacity(0.30), Color.black.opacity(0.12)],
+                                colors: [Palette.obsidianBlack.opacity(0.30), Palette.obsidianBlack.opacity(0.12)],
                                 startPoint: .top,
                                 endPoint: .bottom
                             ),
