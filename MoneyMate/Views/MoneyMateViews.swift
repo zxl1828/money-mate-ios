@@ -568,7 +568,7 @@ struct HomePage: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(store.money(store.balance))
-                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .financialNumber(size: 30, weight: .heavy)
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)

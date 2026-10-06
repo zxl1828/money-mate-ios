@@ -131,12 +131,23 @@ enum Palette {
 // MARK: - 圆角刻度（连续曲率超椭圆）
 
 enum Radius {
-    static let hero: CGFloat = 42
-    static let card: CGFloat = 34
-    static let tile: CGFloat = 26
-    static let chip: CGFloat = 18
-    static let small: CGFloat = 13
-    static let button: CGFloat = 22
+    static let hero: CGFloat = 40
+    static let card: CGFloat = 32
+    static let tile: CGFloat = 24
+    static let chip: CGFloat = 16
+    static let small: CGFloat = 12
+    static let button: CGFloat = 24
+}
+
+/// 8pt spacing rhythm shared by the high-frequency surfaces.
+enum Space {
+    static let x1: CGFloat = 4
+    static let x2: CGFloat = 8
+    static let x3: CGFloat = 12
+    static let x4: CGFloat = 16
+    static let x5: CGFloat = 20
+    static let x6: CGFloat = 24
+    static let x8: CGFloat = 32
 }
 
 extension View {
@@ -171,6 +182,13 @@ extension View {
         self.font(.system(.footnote, design: .rounded).weight(.medium))
             .foregroundStyle(Palette.textSecondary)
     }
+
+    /// Financial values keep their columns aligned while retaining Dynamic Type scaling.
+    func financialNumber(size: CGFloat, weight: Font.Weight = .bold) -> some View {
+        self.font(.system(size: size, weight: weight, design: .rounded))
+            .monospacedDigit()
+            .tracking(0.1)
+    }
 }
 
 // MARK: - 通透液态玻璃容器修饰符 (ClearLiquidGlassModifier)
@@ -204,6 +222,20 @@ struct ClearLiquidGlassModifier: ViewModifier {
                     )
             }
             .clipShape(shape) // 严格绑定连续曲率裁剪规则，杜绝材质图层溢出直角线框
+            .overlay(alignment: .topLeading) {
+                // A single narrow top sheen gives the glass a readable light source
+                // without adding another blur or a second full-card shadow.
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(colorScheme == .dark ? 0.14 : 0.34), Color.clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+                    .mask(shape)
+                    .allowsHitTesting(false)
+            }
             .overlay {
                 // 1pt Specular Rim 多段线性渐变高光边框模拟顶光折射
                 shape

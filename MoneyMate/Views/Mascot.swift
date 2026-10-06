@@ -40,14 +40,14 @@ struct CoinBuddy: View {
 
     // MARK: 双模式配色（浅色=淡紫罗兰/珠光白/金丝，深色=紫晶深调）
     private var isLight: Bool { scheme == .light }
-    private var bodyLight: Color { isLight ? Color(red: 0.86, green: 0.81, blue: 1.00) : Color(red: 0.66, green: 0.33, blue: 0.97) }
-    private var bodyMid: Color { isLight ? Color(red: 0.72, green: 0.62, blue: 0.98) : Color(red: 0.49, green: 0.13, blue: 0.81) }
-    private var bodyEdge: Color { isLight ? Color(red: 0.55, green: 0.45, blue: 0.88) : Color(red: 0.23, green: 0.03, blue: 0.39) }
-    private var wingFill: Color { isLight ? Color(red: 0.79, green: 0.72, blue: 0.99) : Color(red: 0.30, green: 0.11, blue: 0.58) }
+    private var bodyLight: Color { isLight ? Color(red: 0.97, green: 0.95, blue: 1.00) : Color(red: 0.66, green: 0.33, blue: 0.97) }
+    private var bodyMid: Color { isLight ? Color(red: 0.82, green: 0.75, blue: 1.00) : Color(red: 0.49, green: 0.13, blue: 0.81) }
+    private var bodyEdge: Color { isLight ? Color(red: 0.62, green: 0.51, blue: 0.91) : Color(red: 0.23, green: 0.03, blue: 0.39) }
+    private var wingFill: Color { isLight ? Color(red: 0.88, green: 0.83, blue: 1.00) : Color(red: 0.30, green: 0.11, blue: 0.58) }
     private var bellyFill: Color { isLight ? Color.white.opacity(0.85) : Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.45) }
     private var bellyFillLow: Color { isLight ? Color(red: 0.90, green: 0.86, blue: 1.00).opacity(0.65) : Color(red: 0.58, green: 0.20, blue: 0.92).opacity(0.20) }
     private var lensFill: Color { isLight ? Color(red: 0.95, green: 0.94, blue: 1.00) : Color(red: 0.10, green: 0.05, blue: 0.20).opacity(0.7) }
-    private var capFill: Color { isLight ? Color(red: 0.64, green: 0.55, blue: 0.93) : Color(red: 0.12, green: 0.07, blue: 0.22) }
+    private var capFill: Color { isLight ? Color(red: 0.93, green: 0.90, blue: 1.00) : Color(red: 0.12, green: 0.07, blue: 0.22) }
     private var pupilInk: Color { isLight ? Color(red: 0.30, green: 0.22, blue: 0.55) : Color(red: 0.08, green: 0.04, blue: 0.15) }
     private var softShadow: Color { isLight ? Color(red: 0.42, green: 0.34, blue: 0.72).opacity(0.26) : Color.black.opacity(0.45) }
 
@@ -229,7 +229,7 @@ struct CoinBuddy: View {
                 .frame(width: s * 0.65, height: s * 0.22)
                 .overlay(
                     RoundedRectangle(cornerRadius: s * 0.03)
-                        .stroke(Color(red: 0.55, green: 0.36, blue: 0.96), lineWidth: 1.2)
+                        .stroke(isLight ? Color.white.opacity(0.92) : Color(red: 0.55, green: 0.36, blue: 0.96), lineWidth: 1.2)
                 )
                 .shadow(color: softShadow, radius: 3, y: 2)
                 .rotationEffect(.degrees(-4))

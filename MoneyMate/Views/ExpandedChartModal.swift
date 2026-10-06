@@ -63,7 +63,8 @@ struct ExpandedChartModal: View {
     var body: some View {
         ZStack {
             // 背景深色液态玻璃遮罩，突出当前浮层的核心地位
-            Color.black.opacity(0.68)
+            // Purple-black scrim keeps the backdrop dimensional instead of turning it gray.
+            Palette.obsidianBlack.opacity(0.78)
                 .ignoresSafeArea()
                 .onTapGesture {
                     Haptics.tap()
@@ -115,8 +116,8 @@ struct ExpandedChartModal: View {
                     .fill(
                         LinearGradient(
                             stops: [
-                                .init(color: Color(red: 0.12, green: 0.08, blue: 0.22).opacity(0.96), location: 0.0),
-                                .init(color: Color(red: 0.07, green: 0.05, blue: 0.14).opacity(0.98), location: 1.0)
+                                .init(color: Palette.amethystDeep.opacity(0.98), location: 0.0),
+                                .init(color: Palette.obsidianBlack.opacity(0.99), location: 1.0)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -142,7 +143,9 @@ struct ExpandedChartModal: View {
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 24)
+            .compositingGroup()
             .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .mask(RoundedRectangle(cornerRadius: 32, style: .continuous))
             .offset(y: max(0, dragOffset))
             .gesture(
                 DragGesture()
@@ -295,7 +298,7 @@ struct ExpandedChartModal: View {
                             .foregroundStyle(Palette.amberGlow)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.black.opacity(0.6), in: Capsule())
+                            .background(Palette.obsidianBlack.opacity(0.88), in: Capsule())
                             .overlay(Capsule().stroke(Palette.amberGlow.opacity(0.6), lineWidth: 1))
                     }
 
@@ -323,7 +326,7 @@ struct ExpandedChartModal: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color(red: 0.10, green: 0.07, blue: 0.18).opacity(0.95), in: RoundedRectangle(cornerRadius: 12))
+                            .background(Palette.amethystDeep.opacity(0.96), in: RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Palette.amberGlow, lineWidth: 1.2))
                             .shadow(color: Palette.amberGlow.opacity(0.5), radius: 8)
                         }

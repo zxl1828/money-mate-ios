@@ -480,7 +480,7 @@ struct StatsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("本月结余").font(.caption).foregroundStyle(Palette.textSecondary)
                     Text(store.money(store.balance))
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .financialNumber(size: 26, weight: .heavy)
                         .foregroundStyle(Palette.ink)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
@@ -771,7 +771,6 @@ struct TrendChart: View {
             }
         }
         .frame(height: 190)
-        .drawingGroup() // 渲染隔离与离屏光栅化，杜绝页面滚动时的丢帧卡顿
     }
 }
 
@@ -782,26 +781,36 @@ struct DonutChart: View {
     var selectedCategory: String? = nil
     var onSelect: ((CategoryTotal?) -> Void)? = nil
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         let activeItem = items.first(where: { $0.label == selectedCategory })
+        let isDark = colorScheme == .dark
+        let trackColors = isDark
+            ? [Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
+               Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)]
+            : [Color(red: 0.86, green: 0.84, blue: 0.93).opacity(0.94),
+               Color.white.opacity(0.88)]
+        let wellColors = isDark
+            ? [Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.92),
+               Color(red: 0.18, green: 0.11, blue: 0.32).opacity(0.40)]
+            : [Color.white.opacity(0.96),
+               Color(red: 0.88, green: 0.85, blue: 0.95).opacity(0.72)]
         ZStack {
             // 环形凹槽导轨底座 (Recessed Track Well)
             Circle()
                 .stroke(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
-                            Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
-                        ],
+                        colors: trackColors,
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 32
+                    lineWidth: 36
                 )
-                .frame(width: 146, height: 146)
+                .frame(width: 174, height: 174)
                 .overlay(
                     Circle().stroke(Color.white.opacity(0.12), lineWidth: 1)
-                        .frame(width: 178, height: 178)
+                        .frame(width: 208, height: 208)
                 )
 
             // 分类多扇区独立镶嵌彩色水晶切片 (2.5pt 物理间隙与倒角切面)
@@ -818,22 +827,19 @@ struct DonutChart: View {
                 .opacity(selectedCategory == nil || isSelected ? 1.0 : 0.45)
             }
             .chartLegend(.hidden)
-            .frame(height: 190)
+            .frame(height: 220)
 
             // 微凹透镜内芯 (Concave Glass Well)
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [
-                            Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.92),
-                            Color(red: 0.18, green: 0.11, blue: 0.32).opacity(0.40)
-                        ],
+                        colors: wellColors,
                         center: .center,
                         startRadius: 0,
-                        endRadius: 56
+                        endRadius: 68
                     )
                 )
-                .frame(width: 114, height: 114)
+                .frame(width: 136, height: 136)
                 .overlay(
                     Circle()
                         .stroke(
@@ -856,6 +862,7 @@ struct DonutChart: View {
                         .foregroundStyle(Palette.categoryColor(sel.label))
                     Text(money(sel.value))
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(Color.white)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
@@ -868,6 +875,7 @@ struct DonutChart: View {
                         .foregroundStyle(Palette.textSecondary)
                     Text(money(total))
                         .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(Color.white)
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
@@ -876,8 +884,9 @@ struct DonutChart: View {
                         .foregroundStyle(Palette.textTertiary)
                 }
             }
-            .frame(width: 100)
+            .frame(width: 118)
         }
+        .animation(.spring(response: 0.42, dampingFraction: 0.84), value: selectedCategory)
     }
 }
 

@@ -11,7 +11,6 @@ struct BillImportSheet: View {
     @State private var result: BillParseResult?
     @State private var selectedAccountID: UUID?
     @State private var errorMessage: String?
-    @State private var isProcessing = false
 
     var body: some View {
         NavigationStack {
