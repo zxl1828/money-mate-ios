@@ -38,16 +38,16 @@ enum Palette {
     static let ink = textPrimary
 
     static let primary = adaptive(
-        light: (126/255.0, 34/255.0, 206/255.0), // #7E22CE
-        dark: (168/255.0, 85/255.0, 247/255.0)  // #A855F7
+        light: (148/255.0, 120/255.0, 252/255.0),
+        dark: (179/255.0, 158/255.0, 255/255.0)
     )
     static let primaryDeep = adaptive(
-        light: (88/255.0, 28/255.0, 135/255.0),
-        dark: (147/255.0, 51/255.0, 234/255.0)
+        light: (115/255.0, 87/255.0, 224/255.0),
+        dark: (148/255.0, 121/255.0, 255/255.0)
     )
     static let primarySoft = adaptive(
-        light: (147/255.0, 51/255.0, 234/255.0),
-        dark: (192/255.0, 132/255.0, 252/255.0)
+        light: (189/255.0, 168/255.0, 255/255.0),
+        dark: (153/255.0, 135/255.0, 245/255.0)
     )
     static let lilac = adaptive(light: (0.90, 0.87, 1.00), dark: (0.22, 0.19, 0.34))
     static let lavender = adaptive(light: (0.97, 0.96, 1.00), dark: (0.10, 0.08, 0.16))
@@ -204,21 +204,11 @@ struct ClearLiquidGlassModifier: ViewModifier {
             .clipShape(shape) // 严格裁剪内层子内容，彻底杜绝内容四角直角溢出
             .background {
                 shape
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        LinearGradient(
-                            stops: [
-                                .init(color: colorScheme == .dark
-                                      ? Palette.neonViolet.opacity(0.08)
-                                      : Color.white.opacity(0.40), location: 0.0),
-                                .init(color: colorScheme == .dark
-                                      ? Palette.neonViolet.opacity(0.02)
-                                      : Palette.primarySoft.opacity(0.05), location: 0.5),
-                                .init(color: Color.clear, location: 1.0)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                    .fill(.clear)
+                    .glassEffect(
+                        interactive ? .regular.tint(Palette.primary.opacity(0.10)).interactive()
+                                    : .regular.tint(Palette.primary.opacity(0.10)),
+                        in: shape
                     )
             }
             .clipShape(shape) // 严格绑定连续曲率裁剪规则，杜绝材质图层溢出直角线框
@@ -267,9 +257,9 @@ struct ClearLiquidGlassModifier: ViewModifier {
                 color: colorScheme == .dark
                     ? Color.black.opacity(0.36)
                     : Color(red: 0.30, green: 0.20, blue: 0.45).opacity(0.08),
-                radius: 12,
+                radius: 8,
                 x: 0,
-                y: 6
+                y: 3
             )
     }
 }
@@ -827,8 +817,14 @@ struct PurpleBreathingBacklight: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Palette.neonViolet.opacity(0.14))
-                    .blur(radius: 18)
+                    .fill(
+                        RadialGradient(
+                            colors: [Palette.neonViolet.opacity(0.16), .clear],
+                            center: .top,
+                            startRadius: 0,
+                            endRadius: 180
+                        )
+                    )
             )
     }
 }

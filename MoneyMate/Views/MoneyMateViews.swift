@@ -526,128 +526,90 @@ struct HomePage: View {
     // MARK: 结余主卡 (预算总览) - 通透液态玻璃 + Specular Rim + 双层发光环
 
     private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            heroHeaderRow
-            heroGlassPlate
-            heroChips
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("本月结余")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(Palette.textSecondary)
+                    Text(store.money(store.balance))
+                        .financialNumber(size: 36, weight: .bold)
+                        .foregroundStyle(Palette.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) { store.toggleAmountMask() }
+                    Text("预算剩余  \(store.money(store.budgetLeft))")
+                        .font(.system(.footnote, design: .rounded).weight(.medium))
+                        .foregroundStyle(Palette.textSecondary)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    Haptics.tap()
+                    expandedChart = .budget
+                } label: {
+                    GlowDoubleRing(progress: store.budgetProgress, size: 86, label: "预算")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("预算已使用 \(Int(store.budgetProgress * 100))%")
+            }
+
+            Button {
+                Haptics.tap()
+                expandedChart = .budget
+            } label: {
+                VStack(spacing: 8) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Palette.primary.opacity(0.12))
+                            Capsule()
+                                .fill(LinearGradient(colors: [Palette.primarySoft, Palette.primary], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: proxy.size.width * min(max(store.budgetProgress, 0.015), 1))
+                        }
+                    }
+                    .frame(height: 8)
+                    HStack {
+                        Text("预算 · \(store.money(store.budget))")
+                        Spacer()
+                        Text("\(Int(store.budgetProgress * 100))%")
+                            .monospacedDigit()
+                    }
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .foregroundStyle(Palette.textSecondary)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Rectangle()
+                .fill(Palette.textSecondary.opacity(0.16))
+                .frame(height: 1)
+
+            HStack(spacing: 0) {
+                heroMetric(title: "收入", value: store.money(store.income), icon: "arrow.down.left", color: Palette.mint)
+                Rectangle().fill(Palette.textSecondary.opacity(0.16)).frame(width: 1, height: 34).padding(.horizontal, 18)
+                heroMetric(title: "支出", value: store.money(store.expense), icon: "arrow.up.right", color: Palette.rose)
+            }
         }
-        .padding(18)
+        .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .clearLiquidGlass(cornerRadius: 30)
-        .purpleBreathingBacklight(cornerRadius: 30)
+        .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
     }
 
-    private var heroHeaderRow: some View {
-        HStack {
-            Text("预算总览")
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
-                .foregroundStyle(Palette.textPrimary)
-            Spacer()
-            Text("K")
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .foregroundStyle(Palette.textSecondary)
-                .frame(width: 26, height: 26)
-                .background(Palette.neonViolet.opacity(0.18), in: Circle())
-                .overlay(Circle().stroke(Palette.neonViolet.opacity(0.35), lineWidth: 1))
-
-            Button(action: actions.budget) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(Palette.textSecondary)
-                    .frame(width: 26, height: 26)
-                    .background(Palette.neonViolet.opacity(0.18), in: Circle())
-                    .overlay(Circle().stroke(Palette.neonViolet.opacity(0.35), lineWidth: 1))
+    private func heroMetric(title: String, value: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 30, height: 30)
+                .background(color.opacity(0.12), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(.caption, design: .rounded)).foregroundStyle(Palette.textSecondary)
+                Text(value).financialNumber(size: 14, weight: .semibold)
+                    .foregroundStyle(Palette.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
             }
-            .buttonStyle(GelPressButtonStyle(cornerRadius: 13))
         }
-    }
-
-    private var heroGlassPlate: some View {
-        HStack(spacing: 16) {
-            GlowDoubleRing(progress: store.budgetProgress, size: 88, label: "已使用")
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(store.money(store.balance))
-                    .financialNumber(size: 30, weight: .heavy)
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        store.toggleAmountMask()
-                    }
-                Text("本月预算 " + store.money(store.budget))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Palette.textSecondary)
-                Text("剩余额度 " + store.money(store.budgetLeft))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Palette.textSecondary)
-            }
-
-
-            Spacer(minLength: 4)
-
-            Button(action: actions.budget) {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Palette.primarySoft, Palette.primaryDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(.white)
-                    )
-                    .shadow(color: Palette.neonViolet.opacity(0.4), radius: 8)
-            }
-            .buttonStyle(GelPressButtonStyle(cornerRadius: 16))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .clearLiquidGlass(cornerRadius: 24)
-        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .onTapGesture {
-            Haptics.tap()
-            expandedChart = .budget
-        }
-    }
-
-    private var heroChips: some View {
-        HStack(spacing: 12) {
-            heroMetricPill(title: "收入", value: store.money(store.income), icon: "arrow.down.left", color: Palette.mint)
-            heroMetricPill(title: "支出", value: store.money(store.expense), icon: "arrow.up.right", color: Palette.rose)
-        }
-    }
-
-    private func heroMetricPill(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(color.opacity(0.18))
-                .frame(width: 26, height: 26)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(color)
-                )
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(Palette.textSecondary)
-                Text(value)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .clearLiquidGlass(cornerRadius: 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: 四大金刚功能键（嵌套式晶石架构 + 液体凝胶回弹）
