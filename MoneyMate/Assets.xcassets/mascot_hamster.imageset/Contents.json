@@ -1,0 +1,7 @@
+{
+  "images": [
+    { "filename": "mascot_hamster_light.png", "idiom": "universal", "appearances": [{ "appearance": "luminosity", "value": "light" }] },
+    { "filename": "mascot_hamster_dark.png", "idiom": "universal", "appearances": [{ "appearance": "luminosity", "value": "dark" }] }
+  ],
+  "info": { "author": "xcode", "version": 1 }
+}
