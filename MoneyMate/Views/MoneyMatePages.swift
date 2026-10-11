@@ -1088,6 +1088,7 @@ struct SettingsPage: View {
         ScrollView {
             VStack(spacing: 16) {
                 profileCard
+                MascotPicker()
                 assetCard
                 budgetCard
                 prefsCard

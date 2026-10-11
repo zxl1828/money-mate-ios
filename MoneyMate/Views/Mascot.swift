@@ -26,7 +26,7 @@ enum MascotMood {
 
 // MARK: - 小紫：3D 紫晶智慧猫头鹰（博士帽 + 金色流苏 + 金丝眼镜 + 纯 SwiftUI 绘制）
 
-struct CoinBuddy: View {
+struct LegacyCoinBuddy: View {
     var mood: MascotMood = .happy
     var size: CGFloat = 92
 
