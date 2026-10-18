@@ -303,49 +303,46 @@ struct ContentView: View {
             Spacer()
             ZStack(alignment: .bottom) {
                 AmberHalo()
-                    .offset(y: -2)
+                    .offset(y: -76)
 
                 tabBar
 
                 DiamondJewelFab {
                     showAdd = true
                 }
-                .offset(y: -38)
+                .offset(y: -92)
             }
         }
     }
 
     private var tabBar: some View {
-        HStack(spacing: 0) {
-            TabItem(tab: .home, isSelected: tab == .home, namespace: glassNS) {
-                select(.home)
-            }
-            .frame(maxWidth: .infinity)
+        GlassEffectContainer(spacing: 0) {
+            HStack(spacing: 4) {
+                TabItem(tab: .home, isSelected: tab == .home, namespace: glassNS) {
+                    select(.home)
+                }
+                .frame(maxWidth: .infinity)
 
-            TabItem(tab: .list, isSelected: tab == .list, namespace: glassNS) {
-                select(.list)
-            }
-            .frame(maxWidth: .infinity)
+                TabItem(tab: .list, isSelected: tab == .list, namespace: glassNS) {
+                    select(.list)
+                }
+                .frame(maxWidth: .infinity)
 
-            // 中央预留 58pt 独立镂空槽位专供悬浮菱形加号 (FAB)，彻底杜绝压盖
-            Color.clear
-                .frame(width: 58, height: 44)
-                .allowsHitTesting(false)
+                TabItem(tab: .assets, isSelected: tab == .assets, namespace: glassNS) {
+                    select(.assets)
+                }
+                .frame(maxWidth: .infinity)
 
-            TabItem(tab: .assets, isSelected: tab == .assets, namespace: glassNS) {
-                select(.assets)
-            }
-            .frame(maxWidth: .infinity)
+                TabItem(tab: .stats, isSelected: tab == .stats, namespace: glassNS) {
+                    select(.stats)
+                }
+                .frame(maxWidth: .infinity)
 
-            TabItem(tab: .stats, isSelected: tab == .stats, namespace: glassNS) {
-                select(.stats)
+                TabItem(tab: .settings, isSelected: tab == .settings, namespace: glassNS) {
+                    select(.settings)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
-
-            TabItem(tab: .settings, isSelected: tab == .settings, namespace: glassNS) {
-                select(.settings)
-            }
-            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
@@ -895,7 +892,7 @@ struct TagChip: View {
     }
 }
 
-// MARK: - 标签栏按钮（激活标签下方具有径向琥珀暖金微光，形成内蕴能量感）
+// MARK: - 标签栏按钮（iOS 26/27 原生 Liquid Glass 系统界面 + 激活标签琥珀暖金微光）
 
 struct TabItem: View {
     let tab: MoneyTab
@@ -905,32 +902,64 @@ struct TabItem: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .bottom) {
-                // 当前激活标签下方径向琥珀暖金微光
+            ZStack(alignment: .center) {
+                // 当前激活标签背景：高透光液态玻璃高光边框与内蕴微光
                 if isSelected {
+                    Capsule()
+                        .fill(Color.white.opacity(0.06))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        stops: [
+                                            .init(color: Color.white.opacity(0.65), location: 0.0),
+                                            .init(color: Color.white.opacity(0.20), location: 0.35),
+                                            .init(color: Palette.neonViolet.opacity(0.30), location: 0.75),
+                                            .init(color: Color.clear, location: 1.0)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.0
+                                )
+                        )
+                        .allowsHitTesting(false)
+
+                    // 激活标签下方径向琥珀暖金微光
                     RadialGradient(
                         colors: [Palette.amberGlow.opacity(0.70), Palette.amberWarm.opacity(0.20), Color.clear],
                         center: .bottom,
                         startRadius: 0,
                         endRadius: 28
                     )
-                    .frame(width: 46, height: 24)
+                    .frame(height: 24)
                     .offset(y: 8)
                     .allowsHitTesting(false)
                 }
 
                 VStack(spacing: 3) {
                     Image(systemName: tab.icon)
-                        .font(.system(size: 17, weight: isSelected ? .heavy : .medium))
+                        .font(.system(size: 16, weight: isSelected ? .heavy : .medium))
                     Text(tab.title)
                         .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
                 }
                 .foregroundStyle(isSelected ? Palette.amberGlow : Palette.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
-                .contentShape(Capsule())
             }
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .liquidGlass(glass, in: Capsule())
+        .glassEffectID(glassID, in: namespace)
+        .glassEffectUnion(id: "bottomTabBar", namespace: namespace)
+    }
+
+    private var glass: Glass {
+        isSelected ? .regular.tint(Palette.glassTint).interactive() : .clear.interactive()
+    }
+
+    private var glassID: String {
+        isSelected ? "tab-active-" + String(tab.id) : "tab-item-" + String(tab.id)
     }
 }
