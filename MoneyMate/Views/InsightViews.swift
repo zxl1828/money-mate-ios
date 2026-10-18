@@ -4,6 +4,9 @@ import SwiftUI
 
 struct InsightPanel: View {
     @ObservedObject var store: MoneyStore
+    @State private var selectedHeatmapDay = Date()
+    @State private var showingHeatmapDay = false
+    @State private var selectedHeatmapTransaction: Tx?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -24,6 +27,7 @@ struct InsightPanel: View {
             insightCards
             heatmapCard
         }
+        .sheet(isPresented: $showingHeatmapDay) { heatmapDaySheet }
     }
 
     private var habitCard: some View { HabitCard(store: store) }
@@ -149,15 +153,22 @@ struct InsightPanel: View {
             SectionHeader(title: "消费日历", subtitle: "近 10 周，颜色越深花得越多")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 10), spacing: 4) {
                 ForEach(days) { day in
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(Palette.primary.opacity(0.12 + 0.85 * min(day.value / peak, 1)))
-                        .frame(height: 18)
-                        .overlay {
-                            if Calendar.current.isDateInToday(day.date) {
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .stroke(Palette.primary, lineWidth: 1.4)
+                    Button {
+                        selectedHeatmapDay = day.date
+                        showingHeatmapDay = true
+                    } label: {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Palette.primary.opacity(0.12 + 0.85 * min(day.value / peak, 1)))
+                            .frame(height: 18)
+                            .overlay {
+                                if Calendar.current.isDateInToday(day.date) {
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .stroke(Palette.primary, lineWidth: 1.4)
+                                }
                             }
-                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(day.date.formatted(date: .complete, time: .omitted) + "，支出 " + store.money(day.value))
                 }
             }
             HStack {
@@ -179,6 +190,68 @@ struct InsightPanel: View {
         .glassPanel(Radius.card, strong: true)
     }
 
+    private var heatmapDaySheet: some View {
+        let cal = Calendar.current
+        let txs = store.scopedTxs
+            .filter { $0.isExpense && cal.isDate($0.date, inSameDayAs: selectedHeatmapDay) }
+            .sorted { $0.date > $1.date }
+        let total = txs.reduce(0) { $0 - $1.amountCNY }
+        return NavigationStack {
+            List {
+                Section {
+                    HStack {
+                        Text("当日支出")
+                        Spacer()
+                        Text(store.money(total)).fontWeight(.semibold).monospacedDigit()
+                    }
+                    .listRowBackground(Palette.glassTint.opacity(0.12))
+                }
+                Section("\(txs.count) 笔支出") {
+                    if txs.isEmpty {
+                        Text("这一天没有支出记录")
+                            .foregroundStyle(Palette.textSecondary)
+                    } else {
+                        ForEach(txs) { tx in
+                            Button {
+                                selectedHeatmapTransaction = tx
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: Tx.symbol(for: tx.category))
+                                        .foregroundStyle(Palette.primary)
+                                        .frame(width: 30, height: 30)
+                                        .background(Palette.primary.opacity(0.12), in: Circle())
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(tx.title).foregroundStyle(Palette.ink).lineLimit(1)
+                                        Text(tx.category + (tx.merchant.isEmpty ? "" : " · " + tx.merchant))
+                                            .font(.caption).foregroundStyle(Palette.textSecondary).lineLimit(1)
+                                    }
+                                    Spacer(minLength: 8)
+                                    Text(store.money(abs(tx.amountCNY)))
+                                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                                        .foregroundStyle(Palette.rose)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(GlassBackground())
+            .navigationTitle(selectedHeatmapDay.formatted(date: .abbreviated, time: .omitted))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { showingHeatmapDay = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .sheet(item: $selectedHeatmapTransaction) { tx in
+            DetailSheet(store: store, tx: tx)
+        }
+    }
+
     // MARK: - 计算
 
     struct DayValue: Identifiable {
@@ -192,7 +265,7 @@ struct InsightPanel: View {
         var out: [DayValue] = []
         for offset in stride(from: count - 1, through: 0, by: -1) {
             guard let day = cal.date(byAdding: .day, value: -offset, to: Date()) else { continue }
-            let total = store.txs
+            let total = store.scopedTxs
                 .filter { $0.isExpense && cal.isDate($0.date, inSameDayAs: day) }
                 .reduce(0) { $0 - $1.amountCNY }
             out.append(DayValue(date: cal.startOfDay(for: day), value: total))

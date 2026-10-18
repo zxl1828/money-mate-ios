@@ -921,6 +921,7 @@ struct RecurringSheet: View {
                         .frame(maxWidth: .infinity)
                         .glassPanel(Radius.card, strong: true)
                     } else {
+                        monthlyCommitmentCard
                         ForEach(store.recurringRules) { rule in
                             ruleCard(rule)
                         }
@@ -971,6 +972,55 @@ struct RecurringSheet: View {
         .glassPanel(Radius.card, strong: true)
     }
 
+    private var monthlyCommitmentCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Palette.primary)
+                .frame(width: 40, height: 40)
+                .background(Palette.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("月均固定支出")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                Text("\(monthlyExpenseCount) 项支出规则 · 按周期折算")
+                    .font(.caption2)
+                    .foregroundStyle(Palette.textSecondary)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(store.money(monthlyExpenseCommitment))
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(Palette.primary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
+    private var monthlyExpenseCount: Int {
+        store.recurringRules.filter(\.isExpense).count
+    }
+
+    private var monthlyExpenseCommitment: Double {
+        store.recurringRules.reduce(0) { total, rule in
+            guard rule.isExpense else { return total }
+            let multiplier: Double
+            switch rule.recurrence {
+            case .daily: multiplier = 30
+            case .weekly: multiplier = 4.33
+            case .monthly: multiplier = 1
+            case .none: multiplier = 0
+            }
+            return total + abs(rule.amountCNY) * multiplier
+        }
+    }
+
     private func ruleCard(_ rule: Tx) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
@@ -996,7 +1046,9 @@ struct RecurringSheet: View {
                     .font(.caption2).foregroundStyle(Palette.ink.opacity(0.65))
                 Spacer()
                 Button(role: .destructive) {
-                    store.delete(rule)
+                    var stoppedRule = rule
+                    stoppedRule.recurrence = .none
+                    store.update(stoppedRule)
                 } label: {
                     Label("停止", systemImage: "stop.circle")
                         .font(.caption2.weight(.semibold))

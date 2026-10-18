@@ -413,6 +413,7 @@ struct StatsPage: View {
                 insightsCard.springCascade(index: 7, trigger: range)
                 LatteFactorCard(store: store).springCascade(index: 8, trigger: range)
                 InsightPanel(store: store).springCascade(index: 9, trigger: range)
+                FinanceHealthCard(store: store).springCascade(index: 10, trigger: range)
             }
 
             .padding(.horizontal, 20)

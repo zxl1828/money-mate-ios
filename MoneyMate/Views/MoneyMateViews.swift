@@ -80,6 +80,7 @@ struct ContentView: View {
     @State private var showBudget = false
     @State private var showNotify = false
     @State private var showRecurring = false
+    @State private var showCalendar = false
     @State private var editing: Tx?
     @State private var detail: Tx?
     @State private var toast: String?
@@ -113,6 +114,7 @@ struct ContentView: View {
         .sheet(isPresented: $showBudget) { BudgetSheet(store: store) }
         .sheet(isPresented: $showNotify) { NotifySheet(store: store) }
         .sheet(isPresented: $showRecurring) { RecurringSheet(store: store) }
+        .sheet(isPresented: $showCalendar) { CalendarView(store: store) }
         .sheet(item: $detail) { tx in
             DetailSheet(store: store, tx: tx, onEdit: { editing = $0 }, onToast: { push($0) })
         }
@@ -261,7 +263,7 @@ struct ContentView: View {
                     recurring: { showRecurring = true },
                     open: { detail = $0 },
                     openList: { select(.list) },
-                    calendar: { showNotify = true })
+                    calendar: { showCalendar = true })
     }
 
     // MARK: 轻提示
@@ -329,6 +331,11 @@ struct ContentView: View {
             Color.clear
                 .frame(width: 58, height: 44)
                 .allowsHitTesting(false)
+
+            TabItem(tab: .assets, isSelected: tab == .assets, namespace: glassNS) {
+                select(.assets)
+            }
+            .frame(maxWidth: .infinity)
 
             TabItem(tab: .stats, isSelected: tab == .stats, namespace: glassNS) {
                 select(.stats)

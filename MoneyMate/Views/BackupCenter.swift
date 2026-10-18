@@ -47,6 +47,8 @@ struct BackupCenterCard: View {
     @ObservedObject var store: MoneyStore
     var toast: (String) -> Void = { _ in }
     @State private var versions: [URL] = BackupHistory.list()
+    @State private var pendingRestore: URL?
+    @State private var showingRestoreConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -72,14 +74,8 @@ struct BackupCenterCard: View {
                             .foregroundStyle(Palette.ink)
                         Spacer(minLength: 0)
                         Button("恢复") {
-                            guard let data = BackupHistory.read(url) else { return }
-                            if store.importJSON(data) {
-                                Haptics.success()
-                                toast("已恢复到 " + Self.label(url))
-                            } else {
-                                Haptics.error()
-                                toast("这个备份读不出来")
-                            }
+                            pendingRestore = url
+                            showingRestoreConfirmation = true
                         }
                         .font(.caption.weight(.semibold))
                         .buttonStyle(.plain)
@@ -91,6 +87,37 @@ struct BackupCenterCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassPanel(Radius.card, strong: true)
+        .confirmationDialog("恢复历史备份？", isPresented: $showingRestoreConfirmation, titleVisibility: .visible) {
+            if let pendingRestore {
+                Button("覆盖并恢复", role: .destructive) {
+                    restore(pendingRestore)
+                }
+            }
+            Button("取消", role: .cancel) {
+                pendingRestore = nil
+            }
+        } message: {
+            Text("当前账本将被所选备份替换。取消不会更改数据。")
+        }
+    }
+
+    private func restore(_ url: URL) {
+        guard let data = BackupHistory.read(url) else {
+            Haptics.error()
+            toast("无法读取备份，当前数据未更改")
+            pendingRestore = nil
+            return
+        }
+        guard store.importJSON(data) else {
+            Haptics.error()
+            toast("备份内容无效，当前数据未更改")
+            pendingRestore = nil
+            return
+        }
+        Haptics.success()
+        versions = BackupHistory.list()
+        toast("已恢复到 " + Self.label(url))
+        pendingRestore = nil
     }
 
     static func label(_ url: URL) -> String {
