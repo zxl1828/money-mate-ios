@@ -333,7 +333,8 @@ struct ContentView: View {
                 select(.settings)
             }
         }
-        .frame(maxWidth: .infinity, height: 58)
+        .frame(height: 58)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .clearLiquidGlass(cornerRadius: 36)
@@ -941,6 +942,7 @@ struct TabItem: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, height: 58)
+        .frame(height: 58)
+        .frame(maxWidth: .infinity)
     }
 }
