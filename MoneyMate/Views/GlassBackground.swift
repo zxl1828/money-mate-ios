@@ -2,7 +2,6 @@ import SwiftUI
 
 /// 紫色流光背景：明亮通透，深浅模式同构自适应，确保液态玻璃高通透感
 struct GlassBackground: View {
-    @State private var drift = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -27,7 +26,7 @@ struct GlassBackground: View {
                         )
                     )
                     .frame(width: w * 1.12)
-                    .position(x: w * (drift ? 0.30 : 0.16), y: h * 0.16)
+                    .position(x: w * 0.23, y: h * 0.16)
                 Circle()
                     .fill(
                         RadialGradient(
@@ -41,7 +40,7 @@ struct GlassBackground: View {
                         )
                     )
                     .frame(width: w * 0.94)
-                    .position(x: w * (drift ? 0.70 : 0.86), y: h * (drift ? 0.46 : 0.34))
+                    .position(x: w * 0.78, y: h * 0.40)
                 Circle()
                     .fill(
                         RadialGradient(
@@ -55,7 +54,7 @@ struct GlassBackground: View {
                         )
                     )
                     .frame(width: w * 0.78)
-                    .position(x: w * (drift ? 0.42 : 0.28), y: h * (drift ? 0.88 : 0.76))
+                    .position(x: w * 0.35, y: h * 0.82)
                 Circle()
                     .fill(
                         RadialGradient(
@@ -69,13 +68,11 @@ struct GlassBackground: View {
                         )
                     )
                     .frame(width: w * 0.73)
-                    .position(x: w * (drift ? 0.86 : 0.68), y: h * (drift ? 0.84 : 0.96))
+                    .position(x: w * 0.77, y: h * 0.90)
             }
 
             DoodleLayer()
         }
         .ignoresSafeArea()
-        .animation(.easeInOut(duration: 22).repeatForever(autoreverses: true), value: drift)
-        .onAppear { drift = true }
     }
 }

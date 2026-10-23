@@ -17,7 +17,7 @@ struct PrivacyWrapper<Content: View>: View {
             if privacy.enabled && !revealed {
                 ZStack {
                     content
-                        .blur(radius: 16)
+                        .blur(radius: 10)
                         .allowsHitTesting(false)
                     VStack(spacing: 8) {
                         Image(systemName: "eye.slash.fill")

@@ -316,37 +316,28 @@ struct ContentView: View {
     }
 
     private var tabBar: some View {
-        GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 4) {
-                TabItem(tab: .home, isSelected: tab == .home, namespace: glassNS) {
-                    select(.home)
-                }
-                .frame(maxWidth: .infinity)
-
-                TabItem(tab: .list, isSelected: tab == .list, namespace: glassNS) {
-                    select(.list)
-                }
-                .frame(maxWidth: .infinity)
-
-                TabItem(tab: .assets, isSelected: tab == .assets, namespace: glassNS) {
-                    select(.assets)
-                }
-                .frame(maxWidth: .infinity)
-
-                TabItem(tab: .stats, isSelected: tab == .stats, namespace: glassNS) {
-                    select(.stats)
-                }
-                .frame(maxWidth: .infinity)
-
-                TabItem(tab: .settings, isSelected: tab == .settings, namespace: glassNS) {
-                    select(.settings)
-                }
-                .frame(maxWidth: .infinity)
+        HStack(spacing: 4) {
+            TabItem(tab: .home, isSelected: tab == .home) {
+                select(.home)
+            }
+            TabItem(tab: .list, isSelected: tab == .list) {
+                select(.list)
+            }
+            TabItem(tab: .assets, isSelected: tab == .assets) {
+                select(.assets)
+            }
+            TabItem(tab: .stats, isSelected: tab == .stats) {
+                select(.stats)
+            }
+            TabItem(tab: .settings, isSelected: tab == .settings) {
+                select(.settings)
             }
         }
+        .frame(maxWidth: .infinity, height: 58)
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .clearLiquidGlass(cornerRadius: 36)
+        .frame(height: 74)
         .padding(.horizontal, 16)
         .padding(.bottom, 12)
     }
@@ -897,7 +888,6 @@ struct TagChip: View {
 struct TabItem: View {
     let tab: MoneyTab
     let isSelected: Bool
-    let namespace: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -907,6 +897,7 @@ struct TabItem: View {
                 if isSelected {
                     Capsule()
                         .fill(Color.white.opacity(0.06))
+                        .frame(height: 42)
                         .overlay(
                             Capsule()
                                 .strokeBorder(
@@ -950,16 +941,6 @@ struct TabItem: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .liquidGlass(glass, in: Capsule())
-        .glassEffectID(glassID, in: namespace)
-        .glassEffectUnion(id: "bottomTabBar", namespace: namespace)
-    }
-
-    private var glass: Glass {
-        isSelected ? .regular.tint(Palette.glassTint).interactive() : .clear.interactive()
-    }
-
-    private var glassID: String {
-        isSelected ? "tab-active-" + String(tab.id) : "tab-item-" + String(tab.id)
+        .frame(maxWidth: .infinity, height: 58)
     }
 }

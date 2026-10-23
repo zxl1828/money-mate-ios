@@ -63,8 +63,6 @@ struct BuddyHint: View {
 // MARK: - 背景卡通贴纸
 
 struct DoodleLayer: View {
-    @State private var drift = false
-
     var body: some View {
         GeometryReader { proxy in
             let w = proxy.size.width
@@ -72,28 +70,20 @@ struct DoodleLayer: View {
             ZStack {
                 sticker("star.fill", Palette.primarySoft, 18)
                     .position(x: w * 0.13, y: h * 0.09)
-                    .offset(y: drift ? -9 : 9)
                 sticker("sparkle", Palette.rose, 15)
                     .position(x: w * 0.87, y: h * 0.16)
-                    .offset(y: drift ? 10 : -7)
                 sticker("circle.fill", Palette.mint, 9)
                     .position(x: w * 0.19, y: h * 0.40)
-                    .offset(y: drift ? 12 : -12)
                 sticker("star.fill", Palette.primary.opacity(0.55), 12)
                     .position(x: w * 0.83, y: h * 0.60)
-                    .offset(y: drift ? -10 : 10)
                 sticker("sparkles", Palette.primarySoft, 20)
                     .position(x: w * 0.09, y: h * 0.72)
-                    .offset(y: drift ? 8 : -8)
                 sticker("circle.fill", Palette.primarySoft.opacity(0.7), 7)
                     .position(x: w * 0.92, y: h * 0.80)
-                    .offset(y: drift ? -11 : 11)
             }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .animation(.easeInOut(duration: 7).repeatForever(autoreverses: true), value: drift)
-        .onAppear { drift = true }
     }
 
     private func sticker(_ name: String, _ color: Color, _ size: CGFloat) -> some View {
