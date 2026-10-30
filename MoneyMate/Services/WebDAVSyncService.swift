@@ -204,12 +204,13 @@ final class WebDAVSyncService {
 
     private func derive(_ phrase: String, salt: Data) throws -> SymmetricKey {
         var bytes = [UInt8](repeating: 0, count: 32)
+        let outputCount = 32
         let status = salt.withUnsafeBytes { saltBuffer in
             bytes.withUnsafeMutableBytes { keyBuffer in
                 phrase.withCString { password in
                     CCKeyDerivationPBKDF(CCPBKDFAlgorithm(kCCPBKDF2), password, phrase.utf8.count,
                         saltBuffer.bindMemory(to: UInt8.self).baseAddress!, salt.count,
-                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), 310000, keyBuffer.baseAddress!, bytes.count)
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), 310000, keyBuffer.baseAddress!, outputCount)
                 }
             }
         }
