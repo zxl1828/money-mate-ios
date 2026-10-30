@@ -168,13 +168,14 @@ struct TxAttachment: Identifiable, Codable, Hashable {
 // MARK: - 账单类型
 
 enum TxKind: String, Codable {
-    case expense, income, transfer
+    case expense, income, transfer, refund
 
     var title: String {
         switch self {
         case .expense: return "支出"
         case .income: return "收入"
         case .transfer: return "转账"
+        case .refund: return "退款冲减"
         }
     }
 }

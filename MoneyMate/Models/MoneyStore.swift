@@ -110,6 +110,7 @@ struct Tx: Identifiable, Codable, Hashable {
     var memberName: String      // 共享账本记账人
     var reimbursable: Bool      // 待报销
     var ledger: String          // 所属账本（多账本 / 旅行账本）
+    var refundOfID: UUID?
 
     init(id: UUID = UUID(),
          title: String,
@@ -134,7 +135,8 @@ struct Tx: Identifiable, Codable, Hashable {
          updatedAt: Date = Date(),
          memberName: String = "",
          reimbursable: Bool = false,
-         ledger: String = "日常") {
+         ledger: String = "日常",
+         refundOfID: UUID? = nil) {
         self.id = id
         self.title = title
         self.amount = amount
@@ -159,13 +161,14 @@ struct Tx: Identifiable, Codable, Hashable {
         self.memberName = memberName
         self.reimbursable = reimbursable
         self.ledger = ledger
+        self.refundOfID = refundOfID
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, amount, currency, rate, category, date
         case merchant, note, tags, location, latitude, longitude, recurrence, sourceID, autoPosted
         case kind, accountID, toAccountID, attachments, updatedAt, memberName
-        case reimbursable
+        case reimbursable, refundOfID
         case ledger
     }
 
@@ -197,11 +200,12 @@ struct Tx: Identifiable, Codable, Hashable {
         memberName = try c.decodeIfPresent(String.self, forKey: .memberName) ?? ""
         reimbursable = try c.decodeIfPresent(Bool.self, forKey: .reimbursable) ?? false
         ledger = try c.decodeIfPresent(String.self, forKey: .ledger) ?? "日常"
+        refundOfID = try c.decodeIfPresent(UUID.self, forKey: .refundOfID)
     }
 
     var isTransfer: Bool { kind == .transfer }
-    var isIncome: Bool { kind != .transfer && amount >= 0 }
-    var isExpense: Bool { kind != .transfer && amount < 0 }
+    var isIncome: Bool { kind != .transfer && kind != .refund && amount >= 0 }
+    var isExpense: Bool { kind == .refund || (kind != .transfer && amount < 0) }
     var amountCNY: Double { amount * rate }
     var symbol: String { Tx.symbol(for: category) }
 
@@ -463,6 +467,30 @@ final class MoneyStore: ObservableObject {
     func add(_ tx: Tx) {
         txs.insert(tx, at: 0)
         AuditLog.append("新增", tx.title + " " + String(format: "%.2f", tx.amount))
+    }
+
+    func addRefund(for original: Tx, amountCNY: Double, accountID: UUID?) -> Bool {
+        guard original.isExpense, amountCNY > 0 else { return false }
+        let already = txs.filter { $0.kind == .refund && $0.refundOfID == original.id }
+            .reduce(0) { $0 + $1.amountCNY }
+        let remaining = max(abs(original.amountCNY) - already, 0)
+        guard amountCNY <= remaining + 0.005 else { return false }
+        let rate = max(original.rate, 0.000001)
+        let localAmount = amountCNY / rate
+        add(Tx(title: "退款 · " + original.title,
+               amount: localAmount,
+               currency: original.currency,
+               rate: rate,
+               category: original.category,
+               merchant: original.merchant,
+               note: "关联原支出 " + original.id.uuidString,
+               kind: .refund,
+               accountID: accountID ?? original.accountID,
+               updatedAt: Date(),
+               memberName: myName,
+               ledger: original.ledger,
+               refundOfID: original.id))
+        return true
     }
 
     func update(_ tx: Tx) {
@@ -763,7 +791,7 @@ final class MoneyStore: ObservableObject {
     }
 
     func categorySpent(_ category: String) -> Double {
-        monthTxs.filter { $0.isExpense && $0.category == category }.reduce(0) { $0 - $1.amountCNY }
+        max(monthTxs.filter { $0.isExpense && $0.category == category }.reduce(0) { $0 - $1.amountCNY }, 0)
     }
 
     /// 预算吃紧的排行（已用 / 预算）

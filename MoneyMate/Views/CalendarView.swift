@@ -298,8 +298,8 @@ struct CalendarView: View {
 
     private func txRow(_ tx: Tx) -> some View {
         let who = tx.merchant.isEmpty ? tx.category : tx.category + " " + tx.merchant
-        let amount = (tx.isExpense ? "-" : "+") + store.money(abs(tx.amountCNY))
-        let color = tx.isExpense ? Palette.rose : Palette.mint
+        let amount = (tx.isExpense && tx.kind != .refund ? "-" : "+") + store.money(abs(tx.amountCNY))
+        let color = tx.isExpense && tx.kind != .refund ? Palette.rose : Palette.mint
         return HStack {
             Text(who).font(.footnote).lineLimit(1)
             Spacer()

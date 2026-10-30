@@ -1081,6 +1081,8 @@ struct SettingsPage: View {
     @State private var showLedgerMerge = false
     @State private var showSmartBudget = false
     @State private var showBillImport = false
+    @State private var showWebDAV = false
+    @State private var showSubscriptionRadar = false
     @State private var shareFile: ShareFile?
     @ObservedObject private var cloud = CloudSyncService.shared
     @ObservedObject private var privacy = PrivacyState.shared
@@ -1124,6 +1126,12 @@ struct SettingsPage: View {
         }
         .sheet(isPresented: $showNetWorth) {
             NetWorthPage(store: store)
+        }
+        .sheet(isPresented: $showWebDAV) {
+            WebDAVSyncSettings(store: store, toast: toast)
+        }
+        .sheet(isPresented: $showSubscriptionRadar) {
+            SubscriptionRadar(store: store)
         }
         .sheet(isPresented: $showCategoryBudget) {
             CategoryBudgetSheet(store: store)
@@ -1373,6 +1381,12 @@ struct SettingsPage: View {
     private var toolsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "分类与导出", subtitle: "自定义分类、导出 CSV 给 Excel")
+            glassRow(title: "私有 WebDAV 加密同步", systemImage: "externaldrive.badge.icloud") {
+                showWebDAV = true
+            }
+            glassRow(title: "订阅雷达看板", systemImage: "radar") {
+                showSubscriptionRadar = true
+            }
             glassRow(title: "分类管理", systemImage: "square.grid.2x2.fill") {
                 showCategories = true
             }

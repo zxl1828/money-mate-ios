@@ -817,7 +817,7 @@ struct AccountDetailSheet: View {
                         Spacer(minLength: 0)
                         Text(tx.shortAmount)
                             .font(.system(.footnote, design: .rounded).weight(.bold))
-                            .foregroundStyle(tx.isIncome ? Palette.mint : Palette.ink)
+                            .foregroundStyle(tx.isIncome || tx.kind == .refund ? Palette.mint : Palette.ink)
                     }
                     if tx.id != items.prefix(60).last?.id {
                         Rectangle().fill(Palette.ink.opacity(0.06)).frame(height: 1)

@@ -144,7 +144,10 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await bootstrap() }
+                Task {
+                    await bootstrap()
+                    await WebDAVSyncService.shared.syncSaved(store: store)
+                }
                 if locked { Task { await unlock() } }
             }
             if phase == .background && store.privacyLock { locked = true }
@@ -814,7 +817,7 @@ struct TxRow: View {
                 Spacer(minLength: 6)
                 Text(tx.shortAmount)
                     .font(.system(.footnote, design: .rounded).weight(.bold))
-                    .foregroundStyle(tx.isIncome ? Palette.mint : Palette.rose)
+                    .foregroundStyle(tx.isIncome || tx.kind == .refund ? Palette.mint : Palette.rose)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }

@@ -1348,6 +1348,15 @@ struct DetailSheet: View {
     @Environment(\.openURL) private var openURL
     @State private var showSplit = false
     @State private var showAA = false
+    @State private var showRefund = false
+    @State private var refundAmount = ""
+    @State private var refundAccountID: UUID?
+
+    private var remainingRefundCNY: Double {
+        max(abs(tx.amountCNY) - store.txs.filter {
+            $0.kind == .refund && $0.refundOfID == tx.id
+        }.reduce(0) { $0 + $1.amountCNY }, 0)
+    }
 
     var body: some View {
         NavigationStack {
@@ -1371,11 +1380,61 @@ struct DetailSheet: View {
                 }
             }
             .rubberBandSheet { dismiss() }
+        .sheet(isPresented: $showRefund) {
+            NavigationStack {
+                Form {
+                    Section("退款金额") {
+                        TextField("金额", text: $refundAmount)
+                            .keyboardType(.decimalPad)
+                        Text("剩余可退 \(store.money(remainingRefundCNY))")
+                            .font(.caption).foregroundStyle(Palette.textSecondary)
+                    }
+                    Section("退款存入账户") {
+                        Picker("账户", selection: $refundAccountID) {
+                            Text("原账户").tag(Optional<UUID>.none)
+                            ForEach(store.accounts.filter { !$0.archived }) { account in
+                                Text(account.displayName).tag(Optional(account.id))
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("退款冲减")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消") { showRefund = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("确认") {
+                            guard let value = Double(refundAmount),
+                                  store.addRefund(for: tx, amountCNY: value, accountID: refundAccountID) else {
+                                onToast("退款金额无效或超过剩余可退金额")
+                                return
+                            }
+                            showRefund = false
+                            onToast("退款已关联原支出")
+                        }
+                    }
+                }
+            }
+        }
         }
     }
 
     private var headCard: some View {
         VStack(spacing: 10) {
+            if tx.kind != .refund && tx.kind != .transfer && remainingRefundCNY > 0.005 {
+                Button {
+                    refundAmount = String(format: "%.2f", remainingRefundCNY)
+                    refundAccountID = tx.accountID
+                    showRefund = true
+                } label: {
+                    Label("记一笔退款 / 售后冲账", systemImage: "arrow.uturn.backward.circle")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity).padding(.vertical, 13)
+                }
+                .buttonStyle(.plain)
+                .liquidGlass(.clear.interactive(), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+            }
             Image(systemName: tx.symbol)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(.white)
@@ -1386,7 +1445,7 @@ struct DetailSheet: View {
                 .foregroundStyle(Palette.ink)
             Text(tx.displayAmount)
                 .font(.system(size: 26, weight: .heavy, design: .rounded))
-                .foregroundStyle(tx.isIncome ? Palette.mint : Palette.rose)
+                .foregroundStyle(tx.isIncome || tx.kind == .refund ? Palette.mint : Palette.rose)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
             if !tx.tags.isEmpty {
