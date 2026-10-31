@@ -900,7 +900,7 @@ struct TabItem: View {
                 // 当前激活标签背景：高透光液态玻璃高光边框与内蕴微光
                 if isSelected {
                     Capsule()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Palette.primary.opacity(0.10))
                         .frame(height: 42)
                         .overlay(
                             Capsule()
@@ -915,21 +915,13 @@ struct TabItem: View {
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
-                                    lineWidth: 1.0
+                                    lineWidth: 0
                                 )
                         )
                         .allowsHitTesting(false)
 
                     // 激活标签下方径向琥珀暖金微光
-                    RadialGradient(
-                        colors: [Palette.amberGlow.opacity(0.70), Palette.amberWarm.opacity(0.20), Color.clear],
-                        center: .bottom,
-                        startRadius: 0,
-                        endRadius: 28
-                    )
-                    .frame(height: 24)
-                    .offset(y: 8)
-                    .allowsHitTesting(false)
+                    Color.clear.frame(height: 24)
                 }
 
                 VStack(spacing: 3) {
@@ -938,7 +930,7 @@ struct TabItem: View {
                     Text(tab.title)
                         .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
                 }
-                .foregroundStyle(isSelected ? Palette.amberGlow : Palette.textSecondary)
+                .foregroundStyle(isSelected ? Palette.primary : Palette.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
             }

@@ -384,7 +384,7 @@ struct KeypadItemButton: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(
                             colorScheme == .dark
                                 ? LinearGradient(
@@ -393,26 +393,26 @@ struct KeypadItemButton: View {
                                     endPoint: .bottomTrailing
                                 )
                                 : LinearGradient(
-                                    colors: [Color.white.opacity(0.95), Color(red: 0.95, green: 0.91, blue: 0.99), Color.white.opacity(0.8)],
+                                    colors: [Color.white, Color.white, Color.white],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(colorScheme == .dark ? 0.50 : 0.95), Palette.neonViolet.opacity(0.35)],
+                                        colors: [Color.white.opacity(colorScheme == .dark ? 0.18 : 1), Color(red: 0.91, green: 0.89, blue: 0.94)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
-                                    lineWidth: 1.0
+                                    lineWidth: 0.6
                                 )
                         )
                         .shadow(
-                            color: Palette.neonViolet.opacity(colorScheme == .dark ? 0.25 : 0.10),
-                            radius: 6,
-                            y: 3
+                            color: Palette.neonViolet.opacity(colorScheme == .dark ? 0.12 : 0.025),
+                            radius: 4,
+                            y: 2
                         )
 
                     // 图标采用高对比度双色分层模式：次级霓虹紫底圈 + 主轮廓实体色
@@ -435,7 +435,7 @@ struct KeypadItemButton: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(GelPressButtonStyle(cornerRadius: 18))
+        .buttonStyle(GelPressButtonStyle(cornerRadius: 14))
     }
 }
 
@@ -454,7 +454,7 @@ struct QuickActionsKeypad: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
-        .clearLiquidGlass(cornerRadius: 28)
+        .clearLiquidGlass(cornerRadius: 14)
     }
 }
 
@@ -470,70 +470,61 @@ struct DiamondJewelFab: View {
         Button(action: action) {
             ZStack {
                 // 四周扩散的紫罗兰色背光阴影
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Palette.neonViolet.opacity(0.55))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.clear)
                     .frame(width: 54, height: 54)
                     .rotationEffect(.degrees(45))
-                    .blur(radius: 12)
+                    .blur(radius: 0)
 
                 // 3D 切面紫晶宝石主体
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .fill(
                         LinearGradient(
                             stops: [
-                                .init(color: Color(red: 0.82, green: 0.60, blue: 1.00), location: 0.0),
-                                .init(color: Color(red: 0.60, green: 0.28, blue: 0.95), location: 0.45),
-                                .init(color: Color(red: 0.38, green: 0.12, blue: 0.70), location: 0.85),
-                                .init(color: Color(red: 0.22, green: 0.06, blue: 0.45), location: 1.0)
+                                .init(color: Palette.primaryDeep, location: 0.0),
+                                .init(color: Palette.primaryDeep, location: 0.45),
+                                .init(color: Palette.primaryDeep, location: 0.85),
+                                .init(color: Palette.primaryDeep, location: 1.0)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .rotationEffect(.degrees(45))
-                    .frame(width: 52, height: 52)
+                    .frame(width: 58, height: 58)
                     .overlay(
                         // 顶部边缘清晰镜面高光
                         RoundedRectangle(cornerRadius: 15, style: .continuous)
                             .strokeBorder(
                                 LinearGradient(
                                     stops: [
-                                        .init(color: Color.white.opacity(0.95), location: 0.0),
-                                        .init(color: Color.white.opacity(0.40), location: 0.30),
-                                        .init(color: Palette.neonViolet.opacity(0.20), location: 0.70),
+                                        .init(color: Color.clear, location: 0.0),
+                                        .init(color: Color.clear, location: 0.30),
+                                        .init(color: Color.clear, location: 0.70),
                                         .init(color: Color.clear, location: 1.0)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 1.6
+                                lineWidth: 0.6
                             )
-                            .rotationEffect(.degrees(45))
                     )
-                    .shadow(color: Color.black.opacity(0.45), radius: 10, y: 6)
+                    .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
 
                 // 中心纯白微凸加号图标
                 Image(systemName: "plus")
                     .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(.white)
-                    .shadow(color: Color.black.opacity(0.35), radius: 2, y: 1)
+                    .shadow(color: Color.black.opacity(0.08), radius: 1, y: 1)
             }
         }
-        .buttonStyle(GelPressButtonStyle(cornerRadius: 16))
+        .buttonStyle(GelPressButtonStyle(cornerRadius: 14))
     }
 }
 
 // MARK: - 5. 底部 Dock 后方琥珀金橙色弧形背光 (AmberHalo)
 struct AmberHalo: View {
     var body: some View {
-        RadialGradient(
-            colors: [Palette.amberGlow.opacity(0.65), Color(red: 0.85, green: 0.47, blue: 0.02).opacity(0.35), Color.clear],
-            center: .bottom,
-            startRadius: 0,
-            endRadius: 90
-        )
-        .frame(width: 180, height: 60)
-        .clipShape(Capsule())
+        Color.clear.frame(width: 180, height: 60)
         .allowsHitTesting(false)
     }
 }

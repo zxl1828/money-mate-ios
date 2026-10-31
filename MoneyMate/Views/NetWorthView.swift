@@ -55,10 +55,10 @@ struct NetWorthPage: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("净资产")
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Palette.textTertiary)
             Text(store.money(store.netWorthValue))
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
+                .font(.system(size: 34, weight: .heavy, design: .rounded).monospacedDigit())
+                .foregroundStyle(Palette.textPrimary)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
             HStack(spacing: 12) {
@@ -69,22 +69,22 @@ struct NetWorthPage: View {
             HStack {
                 Text("近 6 个月")
                     .font(.system(size: 10, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(Palette.textTertiary)
                 Spacer()
                 if let last = store.netWorthSeries(months: 6).last, let first = store.netWorthSeries(months: 6).first {
                     let delta = last.net - first.net
                     Text((delta >= 0 ? "+" : "") + store.money(delta))
                         .font(.system(size: 10, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(Palette.primaryDeep)
                 }
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.hero, in: squircle(Radius.hero))
+        .background(Color.white, in: squircle(14))
         .overlay {
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(red: 0.91, green: 0.89, blue: 0.94), lineWidth: 0.8)
         }
     }
 
@@ -92,17 +92,17 @@ struct NetWorthPage: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.system(size: 11, design: .rounded))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(Palette.textTertiary)
             Text(value)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(Palette.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+        .background(Color(red: 0.965, green: 0.957, blue: 0.98), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func chart(_ points: [NetWorthPoint]) -> some View {
@@ -134,10 +134,10 @@ struct NetWorthPage: View {
                 }
             }
             context.fill(area, with: .linearGradient(
-                Gradient(colors: [Color.white.opacity(0.35), Color.white.opacity(0.02)]),
+                Gradient(colors: [Palette.primary.opacity(0.16), Palette.primary.opacity(0.01)]),
                 startPoint: CGPoint(x: 0, y: 0),
                 endPoint: CGPoint(x: 0, y: size.height)))
-            context.stroke(line, with: .color(.white), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.primaryDeep), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
         }
         .frame(height: 88)
     }

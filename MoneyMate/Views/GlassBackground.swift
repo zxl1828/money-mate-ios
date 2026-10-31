@@ -17,7 +17,7 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.neonViolet.opacity(colorScheme == .dark ? 0.35 : 0.16),
+                                Palette.neonViolet.opacity(0),
                                 Palette.neonViolet.opacity(0)
                             ],
                             center: .center,
@@ -31,7 +31,7 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.auroraPurple.opacity(colorScheme == .dark ? 0.28 : 0.14),
+                                Palette.auroraPurple.opacity(0),
                                 Palette.auroraPurple.opacity(0)
                             ],
                             center: .center,
@@ -45,7 +45,7 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.rose.opacity(colorScheme == .dark ? 0.20 : 0.10),
+                                Palette.rose.opacity(0),
                                 Palette.rose.opacity(0)
                             ],
                             center: .center,
@@ -59,7 +59,7 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.primary.opacity(colorScheme == .dark ? 0.22 : 0.12),
+                                Palette.primary.opacity(0),
                                 Palette.primary.opacity(0)
                             ],
                             center: .center,
@@ -71,7 +71,7 @@ struct GlassBackground: View {
                     .position(x: w * 0.77, y: h * 0.90)
             }
 
-            DoodleLayer()
+            EmptyView()
         }
         .ignoresSafeArea()
     }
