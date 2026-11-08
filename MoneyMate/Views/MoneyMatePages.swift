@@ -1084,6 +1084,8 @@ struct SettingsPage: View {
     @State private var showWebDAV = false
     @State private var showSubscriptionRadar = false
     @State private var shareFile: ShareFile?
+    @State private var busyText: String?
+    @State private var resultAlert: String?
     @ObservedObject private var cloud = CloudSyncService.shared
     @ObservedObject private var privacy = PrivacyState.shared
 
@@ -1154,38 +1156,160 @@ struct SettingsPage: View {
         .fileImporter(isPresented: $showLedgerMerge, allowedContentTypes: [.json]) { result in
             handleLedgerMerge(result)
         }
+        .overlay {
+            if let busyText {
+                BusyOverlay(text: busyText)
+                    .transition(.opacity)
+            }
+        }
+        .alert("完成", isPresented: Binding(get: { resultAlert != nil },
+                                          set: { if !$0 { resultAlert = nil } })) {
+            Button("好", role: .cancel) { resultAlert = nil }
+        } message: {
+            Text(resultAlert ?? "")
+        }
+    }
+
+    // MARK: - 后台任务：CSV 导出 / 共享包合并 / iCloud
+
+    @MainActor
+    private func exportCSV() async {
+        busyText = "正在生成 CSV…"
+        let text = ExportService.csvString(store: store)
+        let name = "MoneyMate-账本-" + ExportService.stamp() + ".csv"
+        let url = await Task.detached(priority: .userInitiated) { () -> URL? in
+            ExportService.writeText(text, name: name)
+        }.value
+        busyText = nil
+        if let url {
+            shareFile = ShareFile(url: url)
+        } else {
+            resultAlert = "导出失败：临时目录不可写"
+        }
+    }
+
+    @MainActor
+    private func exportLedgerPackage() async {
+        busyText = "正在打包共享账本…"
+        let data = SharedLedgerService.exportPackage(store: store)
+        guard let data else {
+            busyText = nil
+            resultAlert = "导出失败：账本序列化出错"
+            return
+        }
+        let name = SharedLedgerService.suggestedFileName(store: store)
+        let url = await Task.detached(priority: .userInitiated) { () -> URL? in
+            ExportService.writeData(data, name: name)
+        }.value
+        busyText = nil
+        if let url {
+            shareFile = ShareFile(url: url)
+        } else {
+            resultAlert = "导出失败：临时目录不可写"
+        }
+    }
+
+    @MainActor
+    private func performLedgerMerge(_ url: URL) async {
+        busyText = "正在读取共享包…"
+        let data = await Task.detached(priority: .userInitiated) { () -> Data? in
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            return try? Data(contentsOf: url)
+        }.value
+        guard let data else {
+            busyText = nil
+            resultAlert = "文件读不出来，可能已被移动或没有访问权限"
+            return
+        }
+        busyText = "正在合并（按 UUID 去重、以最后修改时间为准）…"
+        let report = SharedLedgerService.merge(data, into: store)
+        busyText = nil
+        if let report {
+            resultAlert = "合并完成：新增 \(report.addedTx) 笔，更新 \(report.updatedTx) 笔，"
+                + "新增账户 \(report.addedAccounts) 个、分类 \(report.addedCategories) 个。"
+        } else {
+            resultAlert = "这不是 MoneyMate 共享包（JSON 结构不匹配）"
+        }
+    }
+
+    @MainActor
+    private func uploadToCloud() async {
+        busyText = "正在打包账本…"
+        guard let data = store.exportJSON() else {
+            busyText = nil
+            resultAlert = "上传失败：账本序列化出错"
+            return
+        }
+        let cloudReady = cloud.isAvailable
+        let wrote = cloud.writeLocalBackup(data)
+        if cloudReady {
+            busyText = "正在上传到 iCloud…"
+            cloud.push(data: data)
+        }
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        busyText = nil
+        if cloudReady {
+            resultAlert = "已上传到 iCloud（\(data.count / 1024) KB）"
+                + (wrote ? "，同时在本机 Documents 留了一份备份文件。" : "")
+        } else if wrote {
+            resultAlert = "本机未登录 iCloud，已把当前账本写成备份文件：\nDocuments/MoneyMate-cloud-backup.json\n用「从 iCloud 恢复」可以随时读回。"
+        } else {
+            resultAlert = "上传失败：iCloud 与本地备份文件都不可写"
+        }
+    }
+
+    @MainActor
+    private func restoreFromCloud() async {
+        busyText = "正在读取备份…"
+        let payload = cloud.remotePayload()
+        guard let payload else {
+            busyText = nil
+            resultAlert = cloud.isAvailable
+                ? "云端还没有账本，先在另一台设备点「立即上传」"
+                : "本机没登录 iCloud，也还没有本地备份文件"
+            return
+        }
+        let ok = store.importJSON(payload)
+        busyText = nil
+        resultAlert = ok ? "已恢复（\(payload.count / 1024) KB）" : "恢复失败：备份数据损坏"
     }
 
 
     private func handleLedgerMerge(_ result: Result<URL, Error>) {
         switch result {
         case .success(let url):
-            let access = url.startAccessingSecurityScopedResource()
-            defer { if access { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else { toast("文件读不出来"); return }
-            if let report = SharedLedgerService.merge(data, into: store) {
-                toast("已合并：新增 \(report.addedTx) 笔，更新 \(report.updatedTx) 笔")
-            } else {
-                toast("不是 MoneyMate 共享包")
-            }
+            Task { await performLedgerMerge(url) }
         case .failure:
-            toast("导入已取消")
+            resultAlert = "导入已取消"
         }
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
         switch result {
         case .success(let url):
+            Task { await performRestoreBackup(url) }
+        case .failure:
+            resultAlert = "导入已取消"
+        }
+    }
+
+    @MainActor
+    private func performRestoreBackup(_ url: URL) async {
+        busyText = "正在读取备份文件…"
+        let data = await Task.detached(priority: .userInitiated) { () -> Data? in
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
-            if let data = try? Data(contentsOf: url), store.importJSON(data) {
-                toast("账本已恢复")
-            } else {
-                toast("文件无法识别")
-            }
-        case .failure:
-            toast("导入已取消")
+            return try? Data(contentsOf: url)
+        }.value
+        guard let data else {
+            busyText = nil
+            resultAlert = "文件读不出来，可能已被移动或没有访问权限"
+            return
         }
+        let ok = store.importJSON(data)
+        busyText = nil
+        resultAlert = ok ? "账本已恢复（\(data.count / 1024) KB）" : "文件无法识别，不是 MoneyMate 备份"
     }
 
     private var profileCard: some View {
@@ -1391,11 +1515,7 @@ struct SettingsPage: View {
                 showCategories = true
             }
             glassRow(title: "导出 CSV（Excel 可打开）", systemImage: "tablecells") {
-                if let url = ExportService.csvFile(store: store) {
-                    shareFile = ShareFile(url: url)
-                } else {
-                    toast("导出失败")
-                }
+                Task { await exportCSV() }
             }
         }
         .padding(18)
@@ -1425,18 +1545,7 @@ struct SettingsPage: View {
             }
             .padding(.vertical, 6)
             glassRow(title: "导出共享包给对方", systemImage: "square.and.arrow.up.on.square") {
-                if let data = SharedLedgerService.exportPackage(store: store) {
-                    let url = FileManager.default.temporaryDirectory
-                        .appendingPathComponent(SharedLedgerService.suggestedFileName(store: store))
-                    do {
-                        try data.write(to: url, options: .atomic)
-                        shareFile = ShareFile(url: url)
-                    } catch {
-                        toast("导出失败")
-                    }
-                } else {
-                    toast("导出失败")
-                }
+                Task { await exportLedgerPackage() }
             }
             glassRow(title: "合并对方的共享包", systemImage: "arrow.triangle.merge") {
                 showLedgerMerge = true
@@ -1450,19 +1559,13 @@ struct SettingsPage: View {
             if store.cloudSync {
                 HStack(spacing: 10) {
                     glassButton(title: "立即上传", systemImage: "icloud.and.arrow.up") {
-                        if let data = store.exportJSON() {
-                            cloud.push(data: data)
-                            toast("已上传到 iCloud")
-                        }
+                        Task { await uploadToCloud() }
                     }
                     glassButton(title: "从 iCloud 恢复", systemImage: "icloud.and.arrow.down") {
-                        if let data = cloud.remotePayload(), store.importJSON(data) {
-                            toast("已从 iCloud 恢复")
-                        } else {
-                            toast("云端还没有账本")
-                        }
+                        Task { await restoreFromCloud() }
                     }
                 }
+                .disabled(busyText != nil)
             }
         }
         .padding(18)
@@ -1647,4 +1750,35 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - 后台任务 Loading 遮罩
+
+struct BusyOverlay: View {
+    let text: String
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.16).ignoresSafeArea()
+            VStack(spacing: 12) {
+                ProgressView()
+                    .controlSize(.large)
+                Text(text)
+                    .font(.system(.footnote, design: .rounded).weight(.medium))
+                    .foregroundStyle(Palette.ink)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 26)
+            .padding(.vertical, 22)
+            .frame(maxWidth: 260)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Palette.ink.opacity(0.08), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.12), radius: 24, y: 10)
+        }
+        .allowsHitTesting(true)
+    }
 }

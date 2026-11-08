@@ -137,4 +137,20 @@ extension MoneyStore {
     func restoreCategories() {
         categories = TxCategory.builtins()
     }
+
+    /// 排序：在同一收支方向内上移 / 下移一个位置（offset = -1 上移，+1 下移）
+    func moveCategory(_ category: TxCategory, by offset: Int) {
+        var items = categories
+            .filter { $0.isIncome == category.isIncome }
+            .sorted { $0.sortIndex < $1.sortIndex }
+        guard let index = items.firstIndex(where: { $0.id == category.id }) else { return }
+        let target = index + offset
+        guard target >= 0, target < items.count else { return }
+        items.swapAt(index, target)
+        for (order, item) in items.enumerated() {
+            if let slot = categories.firstIndex(where: { $0.id == item.id }) {
+                categories[slot].sortIndex = order
+            }
+        }
+    }
 }

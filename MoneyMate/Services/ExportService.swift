@@ -31,11 +31,24 @@ enum ExportService {
     }
 
     static func csvFile(store: MoneyStore) -> URL? {
-        write(csvString(store: store).data(using: .utf8), name: "MoneyMate-账本-" + stamp() + ".csv")
+        writeText(csvString(store: store), name: "MoneyMate-账本-" + stamp() + ".csv")
     }
 
     static func jsonFile(store: MoneyStore) -> URL? {
         write(store.exportJSON(), name: "MoneyMate-账本-" + stamp() + ".json")
+    }
+
+    // MARK: - 后台可调用（不触碰 store，只做文件读写）
+
+    /// 写 UTF-8 文本文件（CSV 已自带 BOM），可在后台线程调用
+    static func writeText(_ text: String, name: String) -> URL? {
+        guard let data = text.data(using: .utf8) else { return nil }
+        return writeData(data, name: name)
+    }
+
+    /// 写二进制文件，可在后台线程调用
+    static func writeData(_ data: Data, name: String) -> URL? {
+        write(data, name: name)
     }
 
     // MARK: - 内部
@@ -59,7 +72,7 @@ enum ExportService {
         return value
     }
 
-    private static func stamp() -> String {
+    static func stamp() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd"
         return formatter.string(from: Date())

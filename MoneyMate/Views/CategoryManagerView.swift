@@ -87,6 +87,24 @@ struct CategoryManagerSheet: View {
                     }
                     Spacer(minLength: 0)
                     Button {
+                        store.moveCategory(item, by: -1)
+                    } label: {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Palette.textSecondary)
+                            .frame(width: 26, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        store.moveCategory(item, by: 1)
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Palette.textSecondary)
+                            .frame(width: 26, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
                         store.setCategoryHidden(item, hidden: !item.hidden)
                     } label: {
                         Image(systemName: item.hidden ? "eye" : "eye.slash")

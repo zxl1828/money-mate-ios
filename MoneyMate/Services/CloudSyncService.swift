@@ -58,6 +58,8 @@ final class CloudSyncService: ObservableObject {
 
     /// 本机写入（persist 时调用）
     func push(data: Data) {
+        // 1) 本地备份文件永远先写一份：没登录 iCloud 也能「上传 / 恢复」
+        writeLocalBackup(data)
         guard isAvailable else { status = .unavailable; return }
         guard data.count <= maxBytes else {
             status = .failed("账本过大（\(data.count / 1024)KB），暂不能云同步")
@@ -73,12 +75,36 @@ final class CloudSyncService: ObservableObject {
         }
     }
 
-    /// 拉取云端的账本（若比本机新）
+    /// 拉取云端的账本（若比本机新）；iCloud 不可用时回退到本地备份文件
     func remotePayload() -> Data? {
-        guard isAvailable else { return nil }
-        guard let raw = kv.data(forKey: payloadKey),
-              let env = try? JSONDecoder().decode(Envelope.self, from: raw) else { return nil }
-        return env.payload
+        if isAvailable,
+           let raw = kv.data(forKey: payloadKey),
+           let env = try? JSONDecoder().decode(Envelope.self, from: raw) {
+            return env.payload
+        }
+        guard let url = localBackupURL,
+              let data = try? Data(contentsOf: url) else { return nil }
+        return data
+    }
+
+    // MARK: - 本地备份文件（iCloud 未开启时的真实持久化链路）
+
+    var localBackupURL: URL? {
+        guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return dir.appendingPathComponent("MoneyMate-cloud-backup.json")
+    }
+
+    var localBackupDate: Date? {
+        guard let url = localBackupURL else { return nil }
+        return (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+    }
+
+    @discardableResult
+    func writeLocalBackup(_ data: Data) -> Bool {
+        guard let url = localBackupURL else { return false }
+        return (try? data.write(to: url, options: .atomic)) != nil
     }
 
     func syncNow() {
