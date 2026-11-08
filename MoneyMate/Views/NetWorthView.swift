@@ -21,6 +21,7 @@ struct NetWorthPage: View {
     @State private var editingAccount: Account?
     @State private var showTransfer = false
     @State private var detailAccount: Account?
+    @State private var showReport = false
 
     var body: some View {
         ScrollView {
@@ -28,6 +29,7 @@ struct NetWorthPage: View {
                 netWorthCard
                 CreditReminderCard(store: store)
                 actionRow
+                reportEntry
                 accountGroups
             }
             .padding(.horizontal, 20)
@@ -47,6 +49,88 @@ struct NetWorthPage: View {
         .sheet(item: $detailAccount) { account in
             AccountDetailSheet(store: store, account: account)
         }
+        .sheet(isPresented: $showReport) {
+            NavigationStack {
+                ProfessionalReportPage(store: store)
+            }
+        }
+    }
+
+    // MARK: 专业财务报表入口
+
+    private var reportSheet: BalanceSheet {
+        AccountingEngine.buildBalanceSheet(
+            accounts: store.activeAccounts,
+            txs: store.scopedTxs,
+            items: AccountingBook.shared.items,
+            monthlyExpense: AccountingEngine.monthlyAverageExpense(store.scopedTxs, months: 3))
+    }
+
+    private var reportEntry: some View {
+        let sheet = reportSheet
+        return Button {
+            showReport = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Palette.primaryDeep)
+                        .frame(width: 34, height: 34)
+                        .background(Color.white.opacity(0.7),
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("专业财务报表")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Palette.primaryDeep)
+                        Text("资产负债表 · 收入支出表 · 财务体检 · 贷款计算")
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.primaryDeep.opacity(0.6))
+                }
+                HStack(spacing: 10) {
+                    reportMetric("总资产", store.money(sheet.totalAssets))
+                    reportMetric("总负债", store.money(sheet.totalLiabilities))
+                    reportMetric("资产负债率", String(format: "%.1f%%", sheet.debtRatio * 100))
+                }
+                if AccountingBook.shared.items.isEmpty {
+                    Text("房产 / 车 / 房贷 / 网贷不在账户里，进去补上才算得准净资产")
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundStyle(Palette.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.heroSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Palette.primary.opacity(0.22), lineWidth: 0.8)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func reportMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 10, design: .rounded))
+                .foregroundStyle(Palette.textSecondary)
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(Palette.primaryDeep)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.55),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     // MARK: 净值卡

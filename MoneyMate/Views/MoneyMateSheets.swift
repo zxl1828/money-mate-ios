@@ -36,6 +36,9 @@ struct AddSheet: View {
     @State private var accountID: UUID?
     @State private var attachments: [TxAttachment] = []
     @State private var categoryTouched = false
+    /// 会计科目（EntryNature.key），空串 = 按关键词自动判定
+    @State private var nature = ""
+    @State private var showNaturePicker = false
     /// 当前展开的大类（点大类就地展开细分）
     @State private var expandedCategory: String?
     @State private var showCamera = false
@@ -64,6 +67,7 @@ struct AddSheet: View {
             ?? store.activeAccounts.first(where: { $0.kind == .wallet })?.id
             ?? store.activeAccounts.first?.id)
         _attachments = State(initialValue: seed?.attachments ?? [])
+        _nature = State(initialValue: seed?.nature ?? "")
     }
 
     private let columns = [GridItem(.adaptive(minimum: 68), spacing: 10)]
@@ -95,6 +99,7 @@ struct AddSheet: View {
                     amountCard
                     accountCard
                     categoryGrid
+                    natureCard
                     currencyCard
                     detailCard
                     receiptCard
@@ -173,6 +178,18 @@ struct AddSheet: View {
         .onChange(of: isIncome) { _, newValue in
             let list = (newValue ? store.incomeCategories : store.expenseCategories).map(\.name)
             if !list.contains(category), let first = list.first { category = first }
+            // 手动选的科目若和新的收支方向冲突，退回自动判断
+            if let entry = EntryNature.byKey(nature), (entry.flow > 0) != newValue {
+                nature = ""
+            }
+        }
+        .sheet(isPresented: $showNaturePicker) {
+            NaturePickerSheet(current: currentNature,
+                              manual: !nature.isEmpty,
+                              guess: natureGuess,
+                              isIncome: isIncome) { picked in
+                applyNature(picked)
+            }
         }
         .onChange(of: merchant) { _, newValue in
             guard !categoryTouched else { return }
@@ -677,6 +694,123 @@ struct AddSheet: View {
         .glassPanel(Radius.card, strong: true)
     }
 
+    // MARK: 会计科目（自动判定 + 可改）
+
+    private var currentAccountKind: AccountKind? {
+        store.activeAccounts.first { $0.id == accountID }?.kind
+    }
+
+    private var natureGuess: NatureGuess {
+        AccountingClassifier.guess(kind: isIncome ? .income : .expense,
+                                   category: category,
+                                   payee: merchant,
+                                   note: note,
+                                   accountKind: currentAccountKind)
+    }
+
+    private var currentNature: EntryNature {
+        AccountingClassifier.effectiveNature(kind: isIncome ? .income : .expense,
+                                             nature: nature,
+                                             category: category,
+                                             payee: merchant,
+                                             note: note,
+                                             accountKind: currentAccountKind)
+    }
+
+    private func applyNature(_ entry: EntryNature?) {
+        guard let entry else {
+            nature = ""
+            return
+        }
+        nature = entry.rawValue
+        isIncome = entry.flow > 0
+    }
+
+    private func natureAccent(_ entry: EntryNature) -> Color {
+        if entry.side == "资产" { return Palette.mint }
+        if entry.side == "负债" { return Palette.rose }
+        return Palette.primary
+    }
+
+    private var natureCard: some View {
+        let entry = currentNature
+        let guess = natureGuess
+        let manual = !nature.isEmpty
+        let accent = natureAccent(entry)
+        return VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Text("会计科目").font(.caption).foregroundStyle(Palette.ink.opacity(0.6))
+                Spacer()
+                Button {
+                    showNaturePicker = true
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("修改").font(.system(size: 11, weight: .semibold, design: .rounded))
+                        Image(systemName: "chevron.right").font(.system(size: 8, weight: .bold))
+                    }
+                    .foregroundStyle(Palette.primary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 11) {
+                Image(systemName: entry.inStatement
+                      ? "receipt_long"
+                      : (entry.flow > 0 ? "arrow.down.left" : "arrow.up.right"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 36, height: 36)
+                    .background(accent.opacity(0.13),
+                                in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(entry.label)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Palette.ink)
+                        Text(entry.side)
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(accent.opacity(0.13),
+                                        in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    }
+                    Text(manual
+                         ? "已手动指定 · 点右上角可改回自动"
+                         : "自动判断（把握 \(Int(guess.confidence * 100))%）· \(guess.reason)")
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+
+            Text(entry.inStatement
+                 ? "计入收入支出表，会影响当期结余与储蓄率。"
+                 : "不计入收支表（只是资产/负债换形态），但会进资产负债表。")
+                .font(.system(size: 10, design: .rounded))
+                .foregroundStyle(Palette.ink.opacity(0.45))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if guess.uncertain && !manual {
+                HStack(alignment: .top, spacing: 5) {
+                    Image(systemName: "info.circle.fill").font(.system(size: 10))
+                    Text(guess.hint)
+                        .font(.system(size: 10, design: .rounded))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(Palette.amberGlow)
+                .padding(9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Palette.amberGlow.opacity(0.1),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassPanel(Radius.card, strong: true)
+    }
+
     private var saveButton: some View {
         Button {
             save()
@@ -721,6 +855,13 @@ struct AddSheet: View {
         }
         let signed = isIncome ? value : -value
         let name = title.trimmingCharacters(in: .whitespaces)
+        let resolvedNature = AccountingClassifier.effectiveNature(
+            kind: isIncome ? .income : .expense,
+            nature: nature,
+            category: category,
+            payee: merchant,
+            note: note,
+            accountKind: currentAccountKind).rawValue
         var finalTags = tags
         if LedgerFlags.tripMode && !finalTags.contains("旅行") { finalTags.append("旅行") }
         let tx = Tx(id: editing?.id ?? UUID(),
@@ -747,7 +888,8 @@ struct AddSheet: View {
                     memberName: store.myName,
                     reimbursable: editing?.reimbursable ?? false,
                     ledger: editing?.ledger
-                        ?? (LedgerState.shared.isAll ? LedgerState.defaultLedger : LedgerState.shared.active))
+                        ?? (LedgerState.shared.isAll ? LedgerState.defaultLedger : LedgerState.shared.active),
+                    nature: resolvedNature)
         if editing != nil {
             store.update(tx)
         } else {
@@ -763,6 +905,140 @@ struct AddSheet: View {
         dismiss()
     }
 }
+// MARK: - 会计科目选择
+
+struct NaturePickerSheet: View {
+    let current: EntryNature
+    let manual: Bool
+    let guess: NatureGuess
+    let isIncome: Bool
+    let onPick: (EntryNature?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var groups: [(String, [EntryNature])] {
+        [("日常收支（计入收支表）", EntryNature.allCases.filter { $0.inStatement }),
+         ("资产（只换形态，不算支出）", EntryNature.allCases.filter { $0.side == "资产" }),
+         ("负债（借来的钱不算收入）", EntryNature.allCases.filter { $0.side == "负债" })]
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("这笔属于哪一类？")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Palette.ink)
+                    Text("选错会让收支表和净资产都跟着错。借钱、还本金、买基金都不算支出。")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if guess.uncertain && !manual {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "info.circle.fill").font(.system(size: 11))
+                        Text(guess.hint)
+                            .font(.system(size: 11, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(Palette.amberGlow)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Palette.amberGlow.opacity(0.1),
+                                in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.0)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.ink.opacity(0.45))
+                        ForEach(group.1) { entry in
+                            tile(entry)
+                        }
+                    }
+                }
+
+                if manual {
+                    Button {
+                        onPick(nil)
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.counterclockwise").font(.system(size: 11))
+                            Text("恢复自动判断")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundStyle(Palette.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Palette.primary.opacity(0.08),
+                                in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+                }
+            }
+            .padding(20)
+            .padding(.bottom, 30)
+        }
+        .scrollIndicators(.hidden)
+        .background(GlassBackground())
+        .presentationDetents([.large])
+    }
+
+    private func accent(_ entry: EntryNature) -> Color {
+        if entry.side == "资产" { return Palette.mint }
+        if entry.side == "负债" { return Palette.rose }
+        return Palette.primary
+    }
+
+    private func tile(_ entry: EntryNature) -> some View {
+        let selected = entry == current
+        let color = accent(entry)
+        return Button {
+            onPick(entry)
+            dismiss()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 16))
+                    .foregroundStyle(selected ? color : Palette.ink.opacity(0.2))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(entry.label)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.ink)
+                        if selected {
+                            Text("当前")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundStyle(color)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(color.opacity(0.13),
+                                            in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        }
+                    }
+                    Text(entry.detail)
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? color.opacity(0.07) : Palette.ink.opacity(0.03),
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(selected ? color.opacity(0.45) : Color.clear, lineWidth: 0.9)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - 预算
 
 struct BudgetSheet: View {
@@ -1351,6 +1627,7 @@ struct DetailSheet: View {
     @State private var showRefund = false
     @State private var refundAmount = ""
     @State private var refundAccountID: UUID?
+    @State private var showNaturePicker = false
 
     private var remainingRefundCNY: Double {
         max(abs(tx.amountCNY) - store.txs.filter {
@@ -1364,6 +1641,9 @@ struct DetailSheet: View {
                 VStack(spacing: 16) {
                     headCard
                     infoCard
+                        .sheet(isPresented: $showNaturePicker) {
+                            natureSheet
+                        }
                     receiptCard
                     mapCard
                     actionRow
@@ -1521,6 +1801,8 @@ struct DetailSheet: View {
         VStack(spacing: 0) {
             row(label: "分类", value: tx.category)
             divider
+            natureRow
+            divider
             row(label: "账户", value: accountLine)
             divider
             row(label: "时间", value: tx.date.formatted(date: .abbreviated, time: .shortened))
@@ -1558,6 +1840,64 @@ struct DetailSheet: View {
 
     private var divider: some View {
         Rectangle().fill(Palette.ink.opacity(0.08)).frame(height: 1)
+    }
+
+    // MARK: 会计科目（可改）
+
+    private var txAccountKind: AccountKind? {
+        store.accounts.first { $0.id == tx.accountID }?.kind
+    }
+
+    private var natureEntry: EntryNature {
+        AccountingEngine.effectiveNature(tx, accountKind: txAccountKind)
+    }
+
+    private var natureGuessInfo: NatureGuess {
+        AccountingClassifier.guess(kind: tx.kind, category: tx.category,
+                                   payee: tx.merchant, note: tx.note,
+                                   accountKind: txAccountKind)
+    }
+
+    private var natureSheet: some View {
+        NaturePickerSheet(current: natureEntry,
+                          manual: !tx.nature.isEmpty,
+                          guess: natureGuessInfo,
+                          isIncome: tx.isIncome) { picked in
+            var target = tx
+            target.nature = picked?.rawValue ?? ""
+            store.update(target)
+            onToast(picked == nil ? "已改回自动判断" : "科目已改为「\(picked!.label)」")
+        }
+    }
+
+    private var natureRow: some View {
+        Button {
+            showNaturePicker = true
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Text("科目")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(Palette.ink.opacity(0.6))
+                    .frame(width: 48, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(natureEntry.label)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(Palette.ink)
+                    Text(natureEntry.side + (tx.nature.isEmpty ? " · 自动判断" : " · 手动指定")
+                         + (natureEntry.inStatement ? " · 计入收支表" : " · 不计入收支表"))
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundStyle(Palette.ink.opacity(0.45))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Palette.primary)
+                    .padding(.top, 2)
+            }
+            .padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
     }
 
     private func row(label: String, value: String) -> some View {

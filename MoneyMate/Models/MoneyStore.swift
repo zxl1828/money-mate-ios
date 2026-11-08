@@ -1,4 +1,4 @@
-import Foundation
+﻿import Foundation
 import CoreLocation
 
 // MARK: - 币种（离线参考汇率，录入时锁定）
@@ -111,6 +111,8 @@ struct Tx: Identifiable, Codable, Hashable {
     var reimbursable: Bool      // 待报销
     var ledger: String          // 所属账本（多账本 / 旅行账本）
     var refundOfID: UUID?
+    /// 会计科目（EntryNature.key）。空串 = 按关键词自动判定
+    var nature: String = ""
 
     init(id: UUID = UUID(),
          title: String,
@@ -136,7 +138,8 @@ struct Tx: Identifiable, Codable, Hashable {
          memberName: String = "",
          reimbursable: Bool = false,
          ledger: String = "日常",
-         refundOfID: UUID? = nil) {
+         refundOfID: UUID? = nil,
+         nature: String = "") {
         self.id = id
         self.title = title
         self.amount = amount
@@ -162,6 +165,7 @@ struct Tx: Identifiable, Codable, Hashable {
         self.reimbursable = reimbursable
         self.ledger = ledger
         self.refundOfID = refundOfID
+        self.nature = nature
     }
 
     enum CodingKeys: String, CodingKey {
@@ -170,6 +174,7 @@ struct Tx: Identifiable, Codable, Hashable {
         case kind, accountID, toAccountID, attachments, updatedAt, memberName
         case reimbursable, refundOfID
         case ledger
+        case nature
     }
 
     // 兼容旧版本存档：缺失字段一律回落默认值
@@ -201,6 +206,7 @@ struct Tx: Identifiable, Codable, Hashable {
         reimbursable = try c.decodeIfPresent(Bool.self, forKey: .reimbursable) ?? false
         ledger = try c.decodeIfPresent(String.self, forKey: .ledger) ?? "日常"
         refundOfID = try c.decodeIfPresent(UUID.self, forKey: .refundOfID)
+        nature = try c.decodeIfPresent(String.self, forKey: .nature) ?? ""
     }
 
     var isTransfer: Bool { kind == .transfer }
