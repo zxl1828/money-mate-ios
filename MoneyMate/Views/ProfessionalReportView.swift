@@ -1129,7 +1129,7 @@ private func toolCard<Content: View>(@ViewBuilder content: () -> Content) -> som
     VStack(alignment: .leading, spacing: 12) { content() }
         .padding(17)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: squircle(15))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .stroke(Color(red: 0.91, green: 0.89, blue: 0.94), lineWidth: 0.8)
