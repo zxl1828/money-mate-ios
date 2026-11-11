@@ -692,6 +692,12 @@ struct ProfessionalReportPage: View {
         card {
             caption("专业工具")
             NavigationLink {
+                PlanningPage(store: store)
+            } label: {
+                toolRow("前瞻规划", "生存跑道 · 四象限 · 现金流沙盒 · 还贷罗盘 · 负债雪崩", "scope")
+            }
+            .buttonStyle(.plain)
+            NavigationLink {
                 LoanCalculatorView(store: store)
             } label: {
                 toolRow("贷款计算器", "等额本息 / 等额本金，看清利息", "percent")

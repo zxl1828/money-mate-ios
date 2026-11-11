@@ -233,6 +233,12 @@ struct ManualItem: Identifiable, Codable, Hashable {
     var value: Double
     var note: String = ""
     var updatedAt: Date = Date()
+    /// 负债年化利率（%），nil / 0 表示没填，用宏观假设兜底
+    var rate: Double?
+    /// 剩余期数（月），nil / 0 表示没填
+    var termMonths: Int?
+    /// true 等额本息，false 等额本金
+    var equalInstallment: Bool?
 
     var isLiability: Bool { kind.isLiability }
 }
