@@ -1068,8 +1068,12 @@ private struct WaveChart: View {
     var points: [Double]
     var floor: Double?
 
+    @State private var active: Int?
+
     var body: some View {
-        Canvas { context, size in
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                Canvas { context, size in
             guard points.count > 1 else { return }
             var minValue = points.min() ?? 0
             var maxValue = points.max() ?? 1
@@ -1148,13 +1152,63 @@ private struct WaveChart: View {
                     context.fill(dot, with: .color(Palette.rose))
                 }
             }
+            // 手指按住的那一点：竖虚线 + 双层圆点
+            if let index = active, index < points.count {
+                let hp = point(index, points[index])
+                var vline = Path()
+                vline.move(to: CGPoint(x: hp.x, y: inset))
+                vline.addLine(to: CGPoint(x: hp.x, y: size.height - inset))
+                context.stroke(vline, with: .color(Palette.primary.opacity(0.45)),
+                               style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                context.fill(Path(ellipseIn: CGRect(x: hp.x - 5, y: hp.y - 5, width: 10, height: 10)),
+                             with: .color(Palette.primary.opacity(0.22)))
+                context.fill(Path(ellipseIn: CGRect(x: hp.x - 3, y: hp.y - 3, width: 6, height: 6)),
+                             with: .color(Palette.primary))
+            }
+
             // 末点
             let last = point(points.count - 1, points[points.count - 1])
             let halo = Path(ellipseIn: CGRect(x: last.x - 4, y: last.y - 4, width: 8, height: 8))
             context.fill(halo, with: .color(Palette.primary))
             let core = Path(ellipseIn: CGRect(x: last.x - 1.6, y: last.y - 1.6, width: 3.2, height: 3.2))
             context.fill(core, with: .color(.white))
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            guard points.count > 1 else { return }
+                            let inset: CGFloat = 10
+                            let usable = max(geo.size.width - inset * 2, 1)
+                            let raw = (value.location.x - inset) / usable
+                            let ratio = Double(min(max(raw, 0), 1))
+                            let idx = Int((ratio * Double(points.count - 1)).rounded())
+                            if idx != active {
+                                active = idx
+                                Haptics.select()
+                            }
+                        }
+                )
+
+                if let index = active, index < points.count {
+                    Text(money(points[index]))
+                        .font(.system(size: 10.5, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Palette.primaryDeep)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white, in: Capsule())
+                        .overlay(Capsule().stroke(Palette.primary.opacity(0.3), lineWidth: 0.8))
+                        .offset(x: bubbleX(index: index, width: geo.size.width), y: 0)
+                        .animation(.spring(response: 0.28, dampingFraction: 0.62), value: active)
+                }
+            }
         }
+    }
+
+    private func bubbleX(index: Int, width: CGFloat) -> CGFloat {
+        guard points.count > 1 else { return 0 }
+        let ratio = CGFloat(index) / CGFloat(points.count - 1)
+        return min(max(width * ratio - 34, 0), max(width - 68, 0))
     }
 }
 
