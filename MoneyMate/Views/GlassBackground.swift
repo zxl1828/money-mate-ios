@@ -17,8 +17,8 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.neonViolet.opacity(0),
-                                Palette.neonViolet.opacity(0)
+                                Palette.neonViolet.opacity(colorScheme == .dark ? 0.30 : 0.16),
+                                Palette.neonViolet.opacity(colorScheme == .dark ? 0.02 : 0.02)
                             ],
                             center: .center,
                             startRadius: 0,
@@ -31,8 +31,8 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.auroraPurple.opacity(0),
-                                Palette.auroraPurple.opacity(0)
+                                Palette.auroraPurple.opacity(colorScheme == .dark ? 0.24 : 0.12),
+                                Palette.auroraPurple.opacity(colorScheme == .dark ? 0.02 : 0.02)
                             ],
                             center: .center,
                             startRadius: 0,
@@ -45,8 +45,8 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.rose.opacity(0),
-                                Palette.rose.opacity(0)
+                                Palette.rose.opacity(colorScheme == .dark ? 0.16 : 0.10),
+                                Palette.rose.opacity(colorScheme == .dark ? 0.02 : 0.02)
                             ],
                             center: .center,
                             startRadius: 0,
@@ -59,8 +59,8 @@ struct GlassBackground: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Palette.primary.opacity(0),
-                                Palette.primary.opacity(0)
+                                Palette.primary.opacity(colorScheme == .dark ? 0.22 : 0.13),
+                                Palette.primary.opacity(colorScheme == .dark ? 0.02 : 0.02)
                             ],
                             center: .center,
                             startRadius: 0,

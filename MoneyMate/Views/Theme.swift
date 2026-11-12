@@ -958,3 +958,33 @@ extension View {
 extension View {
     func tiltAndSheen(maxAngle: Double = 7.0, cornerRadius: CGFloat = Radius.card) -> some View { self }
 }
+
+// MARK: - 滚动叙事（滚动进视口时淡入 + 上浮，可错峰）
+
+/// 轻量滚动叙事修饰符：元素首次出现时从下方 18pt 淡入，按 index 错峰 50ms。
+/// 尊重「减弱动态效果」辅助功能设置。
+struct ScrollRevealModifier: ViewModifier {
+    var index: Int = 0
+    @State private var shown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || reduceMotion ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 18)
+            .onAppear {
+                guard !shown else { return }
+                let delay = Double(min(index, 10)) * 0.05
+                withAnimation(.spring(response: 0.52, dampingFraction: 0.86).delay(delay)) {
+                    shown = true
+                }
+            }
+    }
+}
+
+extension View {
+    /// 滚动叙事出场动画（同一屏内传递增的 index 做错峰）。
+    func scrollReveal(_ index: Int = 0) -> some View {
+        modifier(ScrollRevealModifier(index: index))
+    }
+}

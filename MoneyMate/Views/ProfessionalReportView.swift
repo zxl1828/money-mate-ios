@@ -600,10 +600,13 @@ struct ProfessionalReportPage: View {
         let passed = ratios.filter { $0.score >= 75 }.count
         return VStack(spacing: 16) {
             scoreCard(score, passed: passed, total: ratios.count)
-            ForEach(ratios) { ratio in
+                .scrollReveal(0)
+            ForEach(Array(ratios.enumerated()), id: \.element.id) { index, ratio in
                 ratioCard(ratio)
+                    .scrollReveal(index + 1)
             }
             toolsCard
+                .scrollReveal(ratios.count + 1)
         }
     }
 
