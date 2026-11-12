@@ -692,6 +692,12 @@ struct ProfessionalReportPage: View {
         card {
             caption("专业工具")
             NavigationLink {
+                CoachReportPage(store: store)
+            } label: {
+                toolRow("财务体检报告", "用大白话讲给你听，一段一段打出来", "text.bubble")
+            }
+            .buttonStyle(.plain)
+            NavigationLink {
                 PlanningPage(store: store)
             } label: {
                 toolRow("前瞻规划", "生存跑道 · 四象限 · 现金流沙盒 · 还贷罗盘 · 负债雪崩", "scope")
