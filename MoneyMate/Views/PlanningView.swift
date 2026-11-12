@@ -274,7 +274,7 @@ struct PlanningPage: View {
         }
     }
 
-    private func sliderBlock(_ title: String, value: String, _ slider: () -> some View) -> some View {
+    private func sliderBlock(_ title: String, _ value: String, _ slider: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
@@ -1009,8 +1009,8 @@ private struct RadarChart: View {
 
             func point(_ index: Int, _ ratio: Double) -> CGPoint {
                 let angle = -Double.pi / 2 + 2 * Double.pi * Double(index) / Double(count)
-                return CGPoint(x: center.x + radius * CGFloat(ratio) * cos(angle),
-                               y: center.y + radius * CGFloat(ratio) * sin(angle))
+                return CGPoint(x: center.x + radius * CGFloat(ratio * cos(angle)),
+                               y: center.y + radius * CGFloat(ratio * sin(angle)))
             }
 
             // 网格

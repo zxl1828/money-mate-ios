@@ -900,8 +900,8 @@ enum PlanningEngine {
             var remaining = order.map { $0.balance }
             var totalInterest = 0.0
             var months = 0
-            var paid = [String: Double](repeating: 0, count: order.count)
-            var monthsUsed = [String: Int](repeating: 0, count: order.count)
+            var paid: [String: Double] = [:]
+            var monthsUsed: [String: Int] = [:]
             while remaining.contains(where: { $0 > 1 }), months < 600 {
                 months += 1
                 var spare = extra
