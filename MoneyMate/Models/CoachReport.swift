@@ -194,7 +194,7 @@ enum ReportWriter {
         if stress.dsr > 0.5 {
             return "先降负债：每月还款占收入 \(pct(stress.dsr))，把最高利率那笔优先还掉，投资的事往后放。"
         }
-        if projection.firstAlertIndex >= 0, let first = projection.alerts.first {
+        if let idx = projection.firstAlertIndex, idx >= 0, let first = projection.alerts.first {
             return "先给「\(first.label)」那笔大额支出做准备，把 \(money(projection.safeFloor)) 提前单独存出来。"
         }
         if let largest = allocation.largest, allocation.deviation(of: largest.key) > 0.08 {
