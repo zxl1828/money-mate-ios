@@ -701,6 +701,12 @@ struct ProfessionalReportPage: View {
             }
             .buttonStyle(.plain)
             NavigationLink {
+                FamilyCenterPage(store: store)
+            } label: {
+                toolRow("家庭财务中心", "保障缺口 · 税务优惠 · 目标规划 · 风险情景 · 净资产归因", "person.2.badge.gearshape")
+            }
+            .buttonStyle(.plain)
+            NavigationLink {
                 PlanningPage(store: store)
             } label: {
                 toolRow("前瞻规划", "生存跑道 · 四象限 · 现金流沙盒 · 还贷罗盘 · 负债雪崩", "scope")
