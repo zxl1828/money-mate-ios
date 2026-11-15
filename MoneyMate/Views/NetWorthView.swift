@@ -77,7 +77,7 @@ struct NetWorthPage: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Palette.primaryDeep)
                         .frame(width: 34, height: 34)
-                        .background(Color.white.opacity(0.7),
+                        .background(Palette.tileFill,
                                     in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("专业财务报表")
@@ -129,7 +129,7 @@ struct NetWorthPage: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.55),
+        .background(Palette.tileFillSoft,
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
@@ -165,10 +165,10 @@ struct NetWorthPage: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: squircle(14))
+        .background(Palette.surface, in: squircle(14))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color(red: 0.91, green: 0.89, blue: 0.94), lineWidth: 0.8)
+                .stroke(Palette.tileBorder, lineWidth: 0.8)
         }
     }
 
@@ -186,7 +186,7 @@ struct NetWorthPage: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(red: 0.965, green: 0.957, blue: 0.98), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Palette.tileFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func chart(_ points: [NetWorthPoint]) -> some View {

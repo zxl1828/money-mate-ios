@@ -1196,7 +1196,7 @@ private struct WaveChart: View {
                         .foregroundStyle(Palette.primaryDeep)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.white, in: Capsule())
+                        .background(Palette.surface, in: Capsule())
                         .overlay(Capsule().stroke(Palette.primary.opacity(0.3), lineWidth: 0.8))
                         .offset(x: bubbleX(index: index, width: geo.size.width), y: 0)
                         .animation(.spring(response: 0.28, dampingFraction: 0.62), value: active)
@@ -1228,7 +1228,7 @@ private struct CompassBar: View {
                         endPoint: .trailing
                     ))
                 Rectangle()
-                    .fill(Color.white.opacity(0.55))
+                    .fill(Palette.primary.opacity(0.45))
                     .frame(width: 1.6)
                     .offset(x: proxy.size.width / 2)
                 Circle()

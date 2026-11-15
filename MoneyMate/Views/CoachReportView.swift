@@ -74,7 +74,7 @@ struct CoachReportPage: View {
                     .foregroundStyle(Palette.primaryDeep)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
-                    .background(Color.white.opacity(0.92), in: Capsule())
+                    .background(Palette.surface, in: Capsule())
                     .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 1))
                     .shadow(color: Palette.ink.opacity(0.12), radius: 14, y: 6)
                 }

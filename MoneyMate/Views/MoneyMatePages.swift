@@ -790,13 +790,13 @@ struct DonutChart: View {
         let trackColors = isDark
             ? [Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
                Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)]
-            : [Color(red: 0.86, green: 0.84, blue: 0.93).opacity(0.94),
+            : [Color(red: 0.99, green: 0.97, blue: 0.92).opacity(0.94),
                Color.white.opacity(0.88)]
         let wellColors = isDark
             ? [Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.92),
                Color(red: 0.18, green: 0.11, blue: 0.32).opacity(0.40)]
             : [Color.white.opacity(0.96),
-               Color(red: 0.88, green: 0.85, blue: 0.95).opacity(0.72)]
+               Color(red: 0.96, green: 0.93, blue: 0.87).opacity(0.72)]
         ZStack {
             // 环形凹槽导轨底座 (Recessed Track Well)
             Circle()
@@ -1772,7 +1772,7 @@ struct BusyOverlay: View {
             .padding(.horizontal, 26)
             .padding(.vertical, 22)
             .frame(maxWidth: 260)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Palette.ink.opacity(0.08), lineWidth: 1)

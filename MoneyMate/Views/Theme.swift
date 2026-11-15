@@ -15,73 +15,100 @@ enum Palette {
         })
     }
 
-    // MARK: - WCAG AA 双模式语义色彩标准
-    /// 主文本与核心金额：深色纯白 #FFFFFF，浅色深邃曜黑紫 #1A0F2E（对比度均 > 15:1，远超 7:1 规范）
+    // MARK: - 紫晶黑金（obsidian + champagne）双模式语义色彩
+    /// 主文本与核心金额：深色暖白 #F2EFE9，浅色曜黑 #17140E
     static let textPrimary = adaptive(
-        light: (26/255.0, 15/255.0, 46/255.0),
-        dark: (1.0, 1.0, 1.0)
+        light: (23/255.0, 20/255.0, 14/255.0),
+        dark: (242/255.0, 239/255.0, 233/255.0)
     )
 
-    /// 次级说明与标签：深色高明度淡紫罗兰 #D8B4FE，浅色浓郁深紫 #581C87（对比度均 > 8:1，远超 4.5:1 规范）
+    /// 次级说明与标签：深色 #A19C93，浅色 #6E675C
     static let textSecondary = adaptive(
-        light: (88/255.0, 28/255.0, 135/255.0),
-        dark: (216/255.0, 180/255.0, 254/255.0)
+        light: (110/255.0, 103/255.0, 92/255.0),
+        dark: (161/255.0, 156/255.0, 147/255.0)
     )
 
-    /// 辅助刻度与说明：深色冷中性灰 #94A3B8，浅色中深灰 #4B5563（对比度 > 5:1）
+    /// 辅助刻度与说明：深色 #7C776E，浅色 #8C8375
     static let textTertiary = adaptive(
-        light: (75/255.0, 85/255.0, 99/255.0),
-        dark: (148/255.0, 163/255.0, 184/255.0)
+        light: (140/255.0, 131/255.0, 117/255.0),
+        dark: (124/255.0, 119/255.0, 110/255.0)
     )
 
     /// 保持向前兼容，ink 映射到高对比度主文本色
     static let ink = textPrimary
 
+    /// 香槟金主色：浅色用深棕金（暖纸底上够黑），深色用香槟金（近黑底上最亮）
     static let primary = adaptive(
-        light: (148/255.0, 120/255.0, 252/255.0),
-        dark: (179/255.0, 158/255.0, 255/255.0)
+        light: (138/255.0, 107/255.0, 51/255.0),
+        dark: (201/255.0, 168/255.0, 106/255.0)
     )
     static let primaryDeep = adaptive(
-        light: (115/255.0, 87/255.0, 224/255.0),
-        dark: (148/255.0, 121/255.0, 255/255.0)
+        light: (110/255.0, 83/255.0, 36/255.0),
+        dark: (168/255.0, 135/255.0, 79/255.0)
     )
     static let primarySoft = adaptive(
-        light: (189/255.0, 168/255.0, 255/255.0),
-        dark: (153/255.0, 135/255.0, 245/255.0)
+        light: (201/255.0, 168/255.0, 106/255.0),
+        dark: (142/255.0, 116/255.0, 68/255.0)
     )
-    static let lilac = adaptive(light: (0.90, 0.87, 1.00), dark: (0.22, 0.19, 0.34))
-    static let lavender = adaptive(light: (0.97, 0.96, 1.00), dark: (0.10, 0.08, 0.16))
+    static let lilac = adaptive(light: (239/255.0, 230/255.0, 212/255.0), dark: (38/255.0, 37/255.0, 31/255.0))
+    static let lavender = adaptive(light: (251/255.0, 246/255.0, 236/255.0), dark: (23/255.0, 22/255.0, 26/255.0))
     static let mint = adaptive(
-        light: (16/255.0, 185/255.0, 129/255.0),
-        dark: (52/255.0, 211/255.0, 153/255.0)
+        light: (79/255.0, 107/255.0, 74/255.0),
+        dark: (151/255.0, 174/255.0, 145/255.0)
     )
     static let rose = adaptive(
-        light: (244/255.0, 63/255.0, 94/255.0),
-        dark: (251/255.0, 113/255.0, 133/255.0)
+        light: (154/255.0, 79/255.0, 66/255.0),
+        dark: (198/255.0, 124/255.0, 111/255.0)
+    )
+    /// 提醒 / 警戒：浅色深琥珀，深色香槟琥珀
+    static let warn = adaptive(
+        light: (138/255.0, 90/255.0, 31/255.0),
+        dark: (217/255.0, 168/255.0, 95/255.0)
     )
     /// 玻璃叠加层
     static let glassTint = adaptive(light: (1, 1, 1), dark: (1, 1, 1), alpha: (0.14, 0.07))
     /// 背景光斑用的浅色块
-    static let blobLight = adaptive(light: (1, 1, 1), dark: (0.34, 0.29, 0.55))
+    static let blobLight = adaptive(light: (1, 1, 1), dark: (58/255.0, 52/255.0, 42/255.0))
 
-    // MARK: - 紫晶暗黑与白昼微拟物设计令牌
-    static let obsidianBlack = Color(red: 11/255.0, green: 8/255.0, blue: 20/255.0) // #0B0814
-    static let amethystDeep = Color(red: 23/255.0, green: 16/255.0, blue: 38/255.0)  // #171026
-    static let neonViolet = Color(red: 168/255.0, green: 85/255.0, blue: 247/255.0) // #A855F7
-    static let auroraPurple = Color(red: 139/255.0, green: 92/255.0, blue: 246/255.0)// #8B5CF6
-    static let lightLilac = Color(red: 216/255.0, green: 180/255.0, blue: 254/255.0) // #D8B4FE
-    static let amberGlow = Color(red: 245/255.0, green: 158/255.0, blue: 11/255.0)   // #F59E0B
-    static let amberWarm = Color(red: 251/255.0, green: 191/255.0, blue: 36/255.0)   // #FBBF24
+    // MARK: - 紫晶黑金设计令牌
+    static let obsidianBlack = Color(red: 8/255.0, green: 8/255.0, blue: 10/255.0)      // #08080A
+    static let amethystDeep = Color(red: 20/255.0, green: 20/255.0, blue: 23/255.0)     // #141417
+    static let neonViolet = Color(red: 201/255.0, green: 168/255.0, blue: 106/255.0)    // #C9A86A
+    static let auroraPurple = Color(red: 176/255.0, green: 143/255.0, blue: 85/255.0)   // #B08F55
+    static let lightLilac = Color(red: 232/255.0, green: 226/255.0, blue: 214/255.0)    // #E8E2D6
+    static let amberGlow = Color(red: 201/255.0, green: 168/255.0, blue: 106/255.0)     // #C9A86A
+    static let amberWarm = Color(red: 216/255.0, green: 183/255.0, blue: 126/255.0)     // #D8B77E
 
-    /// 深色背景：深邃紫曜黑径向渐变（#0B0814 至 #171026）
-    /// 浅色背景：纯净珠光浅紫雾白渐变（#F6F4FA 至 #EDE8F6）
+    /// 深色背景：近黑 #0E0E10 → #15151A；浅色：暖纸 #FCF7EE → #F3EADB
     static let bgStart = adaptive(
-        light: (246/255.0, 244/255.0, 250/255.0),
-        dark: (11/255.0, 8/255.0, 20/255.0)
+        light: (252/255.0, 247/255.0, 238/255.0),
+        dark: (14/255.0, 14/255.0, 16/255.0)
     )
     static let bgEnd = adaptive(
-        light: (237/255.0, 232/255.0, 246/255.0),
-        dark: (23/255.0, 16/255.0, 38/255.0)
+        light: (243/255.0, 234/255.0, 219/255.0),
+        dark: (21/255.0, 21/255.0, 26/255.0)
+    )
+
+    /// 面板 / 弹层实心底色（浅色暖白，深色 #18181B）
+    static let surface = adaptive(
+        light: (255/255.0, 253/255.0, 248/255.0),
+        dark: (24/255.0, 24/255.0, 27/255.0)
+    )
+    /// 卡内小色块
+    static let tileFill = adaptive(
+        light: (246/255.0, 240/255.0, 226/255.0),
+        dark: (255/255.0, 255/255.0, 255/255.0),
+        alpha: (1.0, 0.06)
+    )
+    static let tileFillSoft = adaptive(
+        light: (251/255.0, 246/255.0, 236/255.0),
+        dark: (255/255.0, 255/255.0, 255/255.0),
+        alpha: (1.0, 0.04)
+    )
+    static let tileBorder = adaptive(
+        light: (230/255.0, 220/255.0, 200/255.0),
+        dark: (255/255.0, 255/255.0, 255/255.0),
+        alpha: (1.0, 0.10)
     )
 
     static var dynamicBackground: some View {
@@ -100,24 +127,24 @@ enum Palette {
                                      startPoint: .topLeading, endPoint: .bottomTrailing)
     static let heroSoft = LinearGradient(colors: [blobLight.opacity(0.95), lilac],
                                          startPoint: .topLeading, endPoint: .bottomTrailing)
-    static let income = LinearGradient(colors: [mint, Color(red: 0.32, green: 0.72, blue: 0.98)],
+    static let income = LinearGradient(colors: [mint, Color(red: 126/255.0, green: 154/255.0, blue: 120/255.0)],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
-    static let expense = LinearGradient(colors: [Color(red: 1.00, green: 0.68, blue: 0.58), rose],
+    static let expense = LinearGradient(colors: [Color(red: 217/255.0, green: 163/255.0, blue: 143/255.0), rose],
                                         startPoint: .topLeading, endPoint: .bottomTrailing)
 
     static func categoryColor(_ name: String) -> Color {
         switch name {
-        case "餐饮": return Color(red: 1.00, green: 0.65, blue: 0.47)
-        case "交通": return Color(red: 0.42, green: 0.72, blue: 1.00)
-        case "购物": return Color(red: 0.85, green: 0.57, blue: 0.99)
-        case "居家": return Color(red: 0.42, green: 0.84, blue: 0.78)
-        case "娱乐": return Color(red: 1.00, green: 0.44, blue: 0.70)
-        case "医疗": return Color(red: 0.98, green: 0.55, blue: 0.57)
-        case "学习": return Color(red: 0.67, green: 0.71, blue: 1.00)
-        case "旅行": return Color(red: 0.36, green: 0.80, blue: 0.92)
-        case "宠物": return Color(red: 0.98, green: 0.71, blue: 0.42)
+        case "餐饮": return Color(red: 216/255.0, green: 162/255.0, blue: 106/255.0)
+        case "交通": return Color(red: 143/255.0, green: 166/255.0, blue: 184/255.0)
+        case "购物": return Color(red: 201/255.0, green: 168/255.0, blue: 140/255.0)
+        case "居家": return Color(red: 156/255.0, green: 180/255.0, blue: 154/255.0)
+        case "娱乐": return Color(red: 201/255.0, green: 143/255.0, blue: 134/255.0)
+        case "医疗": return Color(red: 207/255.0, green: 144/255.0, blue: 131/255.0)
+        case "学习": return Color(red: 169/255.0, green: 175/255.0, blue: 196/255.0)
+        case "旅行": return Color(red: 143/255.0, green: 179/255.0, blue: 190/255.0)
+        case "宠物": return Color(red: 210/255.0, green: 169/255.0, blue: 108/255.0)
         case "工资": return Palette.mint
-        case "理财": return Color(red: 0.73, green: 0.64, blue: 1.00)
+        case "理财": return Color(red: 191/255.0, green: 174/255.0, blue: 138/255.0)
         default: return Palette.primarySoft
         }
     }
@@ -127,16 +154,23 @@ enum Palette {
                        startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
-
 // MARK: - 圆角刻度（连续曲率超椭圆）
 
 enum Radius {
-    static let hero: CGFloat = 40
-    static let card: CGFloat = 32
-    static let tile: CGFloat = 24
-    static let chip: CGFloat = 16
+    /// 大卡片 / 主视觉面板：24 连续圆角
+    static let hero: CGFloat = 24
+    /// 常规卡片
+    static let card: CGFloat = 24
+    /// 卡内小色块
+    static let tile: CGFloat = 16
+    /// 胶囊 / 分段控件 / 标签：全圆角
+    static let chip: CGFloat = 999
+    /// 小号描边块
     static let small: CGFloat = 12
-    static let button: CGFloat = 24
+    /// 按钮：全圆角
+    static let button: CGFloat = 999
+    /// 全圆角显式值
+    static let pill: CGFloat = 999
 }
 
 /// 8pt spacing rhythm shared by the high-frequency surfaces.
@@ -402,7 +436,7 @@ struct KeypadItemButton: View {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(colorScheme == .dark ? 0.18 : 1), Color(red: 0.91, green: 0.89, blue: 0.94)],
+                                        colors: [Color.white.opacity(colorScheme == .dark ? 0.18 : 1), Palette.tileBorder],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
@@ -587,12 +621,12 @@ struct ToroidalGemRing: View {
                     LinearGradient(
                         colors: light
                             ? [
-                                Color(red: 0.84, green: 0.82, blue: 0.92).opacity(0.95),
-                                Color(red: 0.91, green: 0.90, blue: 0.97).opacity(0.95)
+                                Color(red: 0.93, green: 0.90, blue: 0.85).opacity(0.95),
+                                Color(red: 0.97, green: 0.95, blue: 0.91).opacity(0.95)
                             ]
                             : [
-                                Color(red: 0.08, green: 0.05, blue: 0.16).opacity(0.95),
-                                Color(red: 0.14, green: 0.08, blue: 0.24).opacity(0.85)
+                                Color(red: 0.07, green: 0.07, blue: 0.08).opacity(0.95),
+                                Color(red: 0.12, green: 0.11, blue: 0.10).opacity(0.85)
                             ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -608,7 +642,7 @@ struct ToroidalGemRing: View {
 
             Circle()
                 .stroke(
-                    light ? Color(red: 0.72, green: 0.70, blue: 0.84).opacity(0.55)
+                    light ? Color(red: 0.85, green: 0.81, blue: 0.74).opacity(0.55)
                           : Color.white.opacity(0.08),
                     lineWidth: 1
                 )
@@ -617,7 +651,7 @@ struct ToroidalGemRing: View {
             // 凹槽内部深景深微阴影 (呈现深深凹陷质感)
             Circle()
                 .stroke(
-                    light ? Color(red: 0.55, green: 0.52, blue: 0.70).opacity(0.28)
+                    light ? Color(red: 0.62, green: 0.56, blue: 0.45).opacity(0.28)
                           : Color.black.opacity(0.48),
                     lineWidth: max(strokeW * 0.28, 1)
                 )
@@ -632,11 +666,11 @@ struct ToroidalGemRing: View {
                             colors: light
                                 ? [
                                     Color.white.opacity(0.95),
-                                    Color(red: 0.90, green: 0.89, blue: 0.97).opacity(0.55)
+                                    Color(red: 0.96, green: 0.94, blue: 0.89).opacity(0.55)
                                 ]
                                 : [
-                                    Color(red: 0.06, green: 0.04, blue: 0.14).opacity(0.85),
-                                    Color(red: 0.16, green: 0.10, blue: 0.28).opacity(0.35)
+                                    Color(red: 0.05, green: 0.05, blue: 0.06).opacity(0.85),
+                                    Color(red: 0.16, green: 0.14, blue: 0.11).opacity(0.35)
                                 ],
                             center: .center,
                             startRadius: 0,
@@ -666,8 +700,8 @@ struct ToroidalGemRing: View {
                         colors: [
                             Palette.auroraPurple,
                             Palette.neonViolet,
-                            Color(red: 0.76, green: 0.53, blue: 0.99),
-                            Color(red: 0.22, green: 0.74, blue: 0.97),
+                            Color(red: 0.86, green: 0.76, blue: 0.55),
+                            Color(red: 0.72, green: 0.60, blue: 0.36),
                             Palette.auroraPurple
                         ],
                         center: .center
@@ -684,7 +718,7 @@ struct ToroidalGemRing: View {
                     LinearGradient(
                         colors: [
                             Color.white.opacity(0.85),
-                            Color(red: 0.85, green: 0.72, blue: 1.0).opacity(0.55),
+                            Color(red: 0.96, green: 0.90, blue: 0.76).opacity(0.55),
                             Color.white.opacity(0.3)
                         ],
                         startPoint: .topLeading,
@@ -764,7 +798,7 @@ struct ToroidalGemRing: View {
                 Text(label)
                     .font(.system(size: size * 0.12, weight: .semibold, design: .rounded))
                     .foregroundStyle(light ? Palette.ink.opacity(0.65)
-                                           : Color(red: 0.82, green: 0.72, blue: 0.98))
+                                           : Color(red: 0.90, green: 0.86, blue: 0.76))
             }
         }
         .frame(width: size, height: size)
@@ -873,7 +907,7 @@ struct AuraBorderModifier: ViewModifier {
     var borderWidth: CGFloat = 1.6
     var colors: [Color] = [
         Palette.auroraPurple.opacity(0.18),
-        Color(red: 0.75, green: 0.52, blue: 0.99).opacity(0.40), // 半透明浅紫罗兰 #C084FC 40%
+        Color(red: 0.85, green: 0.75, blue: 0.52).opacity(0.40), // 半透明香槟金
         Color.white.opacity(0.95),                                 // 纯白瞬态折射高光 #FFFFFF 95%
         Palette.neonViolet,                                       // 霓虹极光紫 #A855F7
         Palette.auroraPurple.opacity(0.18)

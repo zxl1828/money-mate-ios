@@ -74,7 +74,7 @@ struct ExpandedChartModal: View {
             VStack(spacing: 0) {
                 // 顶部向下滑动拖拽指示把手
                 Capsule()
-                    .fill(Color.white.opacity(0.35))
+                    .fill(Palette.primary.opacity(0.35))
                     .frame(width: 44, height: 5)
                     .padding(.top, 10)
                     .padding(.bottom, 6)
@@ -85,7 +85,7 @@ struct ExpandedChartModal: View {
                     .padding(.vertical, 8)
 
                 Divider()
-                    .background(Color.white.opacity(0.12))
+                    .background(Palette.tileFill)
                     .padding(.horizontal, 16)
 
                 // 核心图表与数据探针展开内容
@@ -191,7 +191,7 @@ struct ExpandedChartModal: View {
                     .foregroundStyle(Color.white)
                 Text(type.subtitle)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.98).opacity(0.85))
+                    .foregroundStyle(Palette.lightLilac.opacity(0.85))
             }
 
             Spacer(minLength: 0)
@@ -248,7 +248,7 @@ struct ExpandedChartModal: View {
                     .overlay(Capsule().stroke(Palette.neonViolet.opacity(0.3), lineWidth: 1))
             }
             .padding(14)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
 
             // 全尺寸高分辨率折线图
@@ -389,7 +389,7 @@ struct ExpandedChartModal: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .padding(.horizontal, 8)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.12), lineWidth: 1))
     }
 
@@ -541,7 +541,7 @@ struct ExpandedChartModal: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.10), lineWidth: 1))
     }
 }

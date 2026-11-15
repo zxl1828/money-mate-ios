@@ -239,7 +239,7 @@ struct SmartBudgetSheet: View {
                             .foregroundStyle(Palette.rose)
                     }
                     .padding(10)
-                    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }

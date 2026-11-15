@@ -201,7 +201,7 @@ struct ProfessionalReportPage: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func structureCard(_ sheet: BalanceSheet) -> some View {
@@ -317,7 +317,7 @@ struct ProfessionalReportPage: View {
                     }
                     .padding(.horizontal, 11)
                     .padding(.vertical, 9)
-                    .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+                    .background(Palette.tileFill,
                                 in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -459,7 +459,7 @@ struct ProfessionalReportPage: View {
         }
         .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+        .background(Palette.tileFill,
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -765,10 +765,10 @@ struct ProfessionalReportPage: View {
         }
         .padding(17)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: squircle(15))
+        .background(Palette.surface, in: squircle(15))
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .stroke(Color(red: 0.91, green: 0.89, blue: 0.94), lineWidth: 0.8)
+                .stroke(Palette.tileBorder, lineWidth: 0.8)
         }
     }
 
@@ -853,7 +853,7 @@ private struct ManualItemEditor: View {
                     TextField("例如：自住房、比亚迪汉", text: $name)
                         .font(.system(size: 15, design: .rounded))
                         .padding(12)
-                        .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+                        .background(Palette.tileFill,
                                     in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                 }
 
@@ -874,7 +874,7 @@ private struct ManualItemEditor: View {
                         .keyboardType(.decimalPad)
                         .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
                         .padding(12)
-                        .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+                        .background(Palette.tileFill,
                                     in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                     Text(kind.isLiability ? "填剩余未还本金，不是月供" : "填现在能卖掉的价钱，不是买入价")
                         .font(.system(size: 10, design: .rounded))
@@ -888,7 +888,7 @@ private struct ManualItemEditor: View {
                     TextField("可选", text: $note)
                         .font(.system(size: 13, design: .rounded))
                         .padding(12)
-                        .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+                        .background(Palette.tileFill,
                                     in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                 }
 
@@ -1150,10 +1150,10 @@ private func toolCard<Content: View>(@ViewBuilder content: () -> Content) -> som
     VStack(alignment: .leading, spacing: 12) { content() }
         .padding(17)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .stroke(Color(red: 0.91, green: 0.89, blue: 0.94), lineWidth: 0.8)
+                .stroke(Palette.tileBorder, lineWidth: 0.8)
         }
 }
 
@@ -1166,7 +1166,7 @@ private func toolField(_ title: String, _ text: Binding<String>, _ placeholder: 
             .keyboardType(.decimalPad)
             .font(.system(size: 16, weight: .semibold, design: .rounded).monospacedDigit())
             .padding(11)
-            .background(Color(red: 0.965, green: 0.957, blue: 0.98),
+            .background(Palette.tileFill,
                         in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }

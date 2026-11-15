@@ -138,7 +138,7 @@ struct LatteFactorCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+            .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("年化累计投影")
@@ -150,7 +150,7 @@ struct LatteFactorCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+            .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
         }
     }
 

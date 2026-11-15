@@ -456,7 +456,7 @@ struct CalendarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
-            .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
+            .background(Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
 
             if let low = lowestPoint, low.isLow {
                 HStack(spacing: 8) {
@@ -552,7 +552,7 @@ struct CalendarView: View {
                             .foregroundStyle(it.isIncome ? Palette.mint : Palette.rose)
                     }
                     .padding(.vertical, 4)
-                    Divider().background(Color.white.opacity(0.06))
+                    Divider().background(Palette.tileBorder)
                 }
             }
         }

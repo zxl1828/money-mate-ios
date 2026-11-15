@@ -469,7 +469,7 @@ struct HomePage: View {
                                     endPoint: .bottomTrailing
                                 )
                                 : LinearGradient(
-                                    colors: [Color.white.opacity(0.88), Color(red: 0.94, green: 0.91, blue: 0.98).opacity(0.85)],
+                                    colors: [Color.white.opacity(0.88), Color(red: 0.98, green: 0.95, blue: 0.89).opacity(0.85)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -494,7 +494,7 @@ struct HomePage: View {
                         .shadow(
                             color: colorScheme == .dark
                                 ? Palette.neonViolet.opacity(0.25)
-                                : Color(red: 0.40, green: 0.20, blue: 0.60).opacity(0.12),
+                                : Palette.primaryDeep.opacity(0.12),
                             radius: colorScheme == .dark ? 10 : 8,
                             y: 3
                         )

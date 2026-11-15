@@ -280,7 +280,7 @@ struct BillImportSheet: View {
                             .foregroundStyle(item.kind == .expense ? Palette.rose : Palette.mint)
                     }
                     .padding(10)
-                    .background(Color.white.opacity(item.isSelected ? 0.05 : 0.02), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(item.isSelected ? Palette.primary.opacity(0.14) : Palette.tileFillSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }
